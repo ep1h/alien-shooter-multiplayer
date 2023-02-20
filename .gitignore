@@ -3,6 +3,7 @@
 
 !/.gitignore
 !/.gitmodules
+!/Makefile
 !/README.md
 
 !/asmp-dll/

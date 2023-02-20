@@ -1,0 +1,3 @@
+[submodule "asmp-dll/test/src/eztest"]
+	path = asmp-dll/test/src/eztest
+	url = https://github.com/ep1h/eztest

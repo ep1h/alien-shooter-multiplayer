@@ -1,10 +1,23 @@
+#include <stdbool.h>
 #include <windows.h>
 
 static HINSTANCE instance_handle = 0;
 
+static bool dllmain_init(void);
+static void dllmain_destroy(void);
+static void dllmain_loop(void);
 static void dllmain_entry(void);
 
-static void dllmain_entry(void)
+static bool dllmain_init(void)
+{
+    return true;
+}
+
+static void dllmain_destroy(void)
+{
+}
+
+static void dllmain_loop(void)
 {
     while (1)
     {
@@ -13,6 +26,15 @@ static void dllmain_entry(void)
         {
             break;
         }
+    }
+}
+
+static void dllmain_entry(void)
+{
+    if (dllmain_init())
+    {
+        dllmain_loop();
+        dllmain_destroy();
     }
     FreeLibraryAndExitThread(instance_handle, 0);
 }

@@ -8,6 +8,7 @@
 !/asmp-dll/
 /asmp-dll/*
 
+!/asmp-dll/Makefile
 !/asmp-dll/README.md
 !/asmp-dll/.clang-format
 

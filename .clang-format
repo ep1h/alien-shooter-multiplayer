@@ -1,0 +1,10 @@
+Language: Cpp
+BasedOnStyle: Microsoft
+UseTab: Never
+ColumnLimit: 80
+SortIncludes: false
+PointerAlignment: Left
+AlignConsecutiveMacros: true
+BraceWrapping:
+  AfterCaseLabel: true
+MaxEmptyLinesToKeep: 3

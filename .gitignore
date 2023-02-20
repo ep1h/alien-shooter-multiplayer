@@ -2,6 +2,7 @@
 /*/
 
 !/.gitignore
+!/.gitmodules
 !/README.md
 
 !/asmp-dll/
@@ -11,3 +12,4 @@
 !/asmp-dll/.clang-format
 
 !/asmp-dll/src
+!/asmp-dll/test

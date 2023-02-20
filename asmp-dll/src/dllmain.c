@@ -3,6 +3,7 @@
  * @brief Entry point of alien shooter multiplayer client.
  *
  */
+#include <stdbool.h>
 #include <windows.h>
 
 static HINSTANCE instance_handle = 0;
@@ -23,11 +24,38 @@ static HINSTANCE instance_handle = 0;
 BOOL WINAPI DllMain(HMODULE hinst, DWORD reason, LPVOID reserved);
 
 /**
+ * @brief Initialization of the components required for the DLL to work.
+ *
+ * @return true
+ * @return false
+ */
+static bool dllmain_init(void);
+
+/**
+ * @brief Cleanup logic before DLL unloading.
+ */
+static void dllmain_destroy(void);
+
+/**
+ * @brief Main loop of the DLL.
+ */
+static void dllmain_loop(void);
+
+/**
  * @brief Main thread of the DLL.
  */
 static void dllmain_entry(void);
 
-static void dllmain_entry(void)
+static bool dllmain_init(void)
+{
+    return true;
+}
+
+static void dllmain_destroy(void)
+{
+}
+
+static void dllmain_loop(void)
 {
     while (1)
     {
@@ -36,6 +64,15 @@ static void dllmain_entry(void)
         {
             break;
         }
+    }
+}
+
+static void dllmain_entry(void)
+{
+    if (dllmain_init())
+    {
+        dllmain_loop();
+        dllmain_destroy();
     }
     FreeLibraryAndExitThread(instance_handle, 0);
 }

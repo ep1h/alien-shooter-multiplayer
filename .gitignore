@@ -3,3 +3,8 @@
 
 !/.gitignore
 !/README.md
+
+!/asmp-dll/
+/asmp-dll/*
+
+!/asmp-dll/README.md

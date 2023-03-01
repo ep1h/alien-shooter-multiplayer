@@ -2,6 +2,7 @@
 #include "maps\common.lgc"
 //#include "maps\common_menu.lgc"
 //#include "maps\common_fame.lgc"
+#include "maps\asmp_play.lgc"
 
 //for MenuState
 #define MENU_PLAY     0
@@ -14,6 +15,9 @@
 #define MENU_SURVIVE  8
 #define MENU_LOAD     9
 #define MENU_ADDON    10
+
+#define MENU_ASMP     11
+#define MENU_ASMP_VIRTUAL 8
 
 int MenuState = MENU_MAIN;//тип меню 0-Play,1-Options,2-FameHall,3-Credits,4-Quit,5-BaseMenu
 int StartEffectTime = 0;//время начала видео эффекта
@@ -114,7 +118,16 @@ main()
     {
       // не переходим к CONTINUE если save нет
       if( MenuNDirUnderCursor()!=MENU_CONTINUE || GetReg( GetDefaultRegPath(),"SaveName0","" )!="" )
-        ChangeMenuState(MenuNDirUnderCursor());
+	  {
+	    if( MenuNDirUnderCursor() == MENU_ASMP_VIRTUAL )
+		{
+		  ChangeMenuState(MENU_ASMP);
+		}
+		else
+		{
+		  ChangeMenuState(MenuNDirUnderCursor());
+	    }
+	  }
     }
     if( GetKey()==' ' || GetKey()==13 )
       ChangeMenuState(MENU_PLAY);
@@ -353,5 +366,25 @@ main()
       StartEffectTime = 0;
       Load("maps\\shop.map");
     }
+  }
+  else if( MenuState==MENU_ASMP )
+  {
+	if( StartEffectTime && GetEffectState(EFF_FADE) > 45 )
+    {
+      StartEffectTime = 0;
+      CreateMultiplayerMenu();
+    }
+	if( MenuLClick() )
+	{
+	  if( MenuNDirUnderCursor() == 2 ) // Main menu
+	  {
+	    ChangeMenuState(MENU_MAIN);
+	  }
+	}
+    if( GetKey()==27 )
+    {
+	  ChangeMenuState(MENU_MAIN);
+    }
+	TactMultiplayerMenu();
   }
 }

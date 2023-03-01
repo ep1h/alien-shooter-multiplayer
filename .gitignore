@@ -15,3 +15,11 @@
 
 !/asmp-dll/src
 !/asmp-dll/test
+
+!/game/
+/game/*
+!/game/AlienShooter/
+/game/AlienShooter/*
+!/game/AlienShooter/Maps/
+/game/AlienShooter/Maps/*
+!/game/AlienShooter/Maps/asmp_mainmenu.men

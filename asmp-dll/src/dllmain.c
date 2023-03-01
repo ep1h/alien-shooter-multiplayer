@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <windows.h>
+#include "utils/console/console.h"
 
 static HINSTANCE instance_handle = 0;
 
@@ -10,11 +11,16 @@ static void dllmain_entry(void);
 
 static bool dllmain_init(void)
 {
-    return true;
+    if (console_init())
+    {
+        return true;
+    }
+    return false;
 }
 
 static void dllmain_destroy(void)
 {
+    console_destroy();
 }
 
 static void dllmain_loop(void)
@@ -33,6 +39,7 @@ static void dllmain_entry(void)
 {
     if (dllmain_init())
     {
+        console_log("dllmain_entry()\n");
         dllmain_loop();
         dllmain_destroy();
     }

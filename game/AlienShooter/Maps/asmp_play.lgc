@@ -1,0 +1,110 @@
+static string asmpStrName;
+static string asmpStrAddress;
+static string asmpStrConnecting;
+
+static int targetEditbox = 0;
+
+#define TARGET_EDITBOX_NONE    0
+#define TARGET_EDITBOX_NAME    1
+#define TARGET_EDITBOX_ADDRESS 2
+
+
+int connectingAnimationTimer = 0;
+AnimateConnectingText()
+{
+  if( strlen(asmpStrConnecting) != 0 )
+  {
+    if( ( GetTime()-connectingAnimationTimer ) > 250 )
+    {
+      connectingAnimationTimer = GetTime();
+      if( strlen(asmpStrConnecting) < strlen("connecting...") )
+      {
+        asmpStrConnecting+=".";
+      }
+      else
+      {
+        asmpStrConnecting="connecting";
+      }
+    }
+  }
+}
+
+CreateMultiplayerMenu()
+{
+  int menu;
+  MenuRelease();
+  MenuLoad("maps\\asmp_play.men");
+  asmpStrConnecting = "";
+  /* Male by default */
+  MenuAction(706,0,ANI_MENUSTANDUP);
+}
+
+TactMultiplayerMenu()
+{
+  AnimateConnectingText();
+
+  if( MenuLClick() )
+  {
+    if( MenuNVidUnderCursor()==706 )
+  {
+      MenuAction(706,0,ANI_MENUSTANDUP);
+      MenuAction(707,0,ANI_MENUSTANDDOWN);
+      SetReg(GetDefaultRegPath(),"PlayerSex","male");
+    }
+    else if( MenuNVidUnderCursor()==707 )
+    {
+      MenuAction(707,0,ANI_MENUSTANDUP);
+      MenuAction(706,0,ANI_MENUSTANDDOWN);
+      SetReg(GetDefaultRegPath(),"PlayerSex","female");
+    }
+
+
+    if( MenuNVidUnderCursor()==705 ) // Button
+    {
+      if( MenuNDirUnderCursor() == 1 ) // Connect
+      {
+        // Show "connecting" text
+        asmpStrConnecting = "connecting";
+      }
+    }
+    else if( MenuNVidUnderCursor()==708 ) // EditBox
+    {
+      if( MenuNDirUnderCursor() == 0 ) // Name
+      {
+        //asmpStrName = "Name";
+        targetEditbox = TARGET_EDITBOX_NAME;
+      }
+      else if( MenuNDirUnderCursor() == 1 ) // Address
+      {
+        //asmpStrAddress = "Address";
+        targetEditbox = TARGET_EDITBOX_ADDRESS;
+      }
+    }
+  }
+
+  if( targetEditbox == TARGET_EDITBOX_NAME )
+  {
+    // Handle backspace
+    if( GetKey()==VK_BACK && strlen(asmpStrName) >= 1 )
+    {
+      asmpStrName[strlen(asmpStrName)-1] = 0;
+    }
+    else if( GetKey() >= 32 && GetKey() <= 126 )
+    {
+        asmpStrName += Printf("%c",GetKey());
+    }
+  }
+  else if ( targetEditbox == TARGET_EDITBOX_ADDRESS )
+  {
+    // Handle backspace
+    if( GetKey()==VK_BACK && strlen(asmpStrAddress) >= 1 )
+    {
+      asmpStrAddress[strlen(asmpStrAddress)-1] = 0;
+    }
+    else if( (GetKey() >= 48 && GetKey() <= 57) || // Handle numbers
+             GetKey() == '.' || GetKey() == ':')   // Handle dot, colon
+    {
+      asmpStrAddress += Printf("%c",GetKey());
+    }
+  }
+}

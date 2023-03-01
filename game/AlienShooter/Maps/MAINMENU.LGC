@@ -1,0 +1,357 @@
+#include "maps\export.lgc"
+#include "maps\common.lgc"
+//#include "maps\common_menu.lgc"
+//#include "maps\common_fame.lgc"
+
+//for MenuState
+#define MENU_PLAY     0
+#define MENU_OPTIONS  1
+#define MENU_FAME     2
+#define MENU_EXIT     4
+#define MENU_CONTINUE 5
+#define MENU_MAIN     6
+#define MENU_COMPAIGN 7
+#define MENU_SURVIVE  8
+#define MENU_LOAD     9
+#define MENU_ADDON    10
+
+int MenuState = MENU_MAIN;//тип меню 0-Play,1-Options,2-FameHall,3-Credits,4-Quit,5-BaseMenu
+int StartEffectTime = 0;//врем€ начала видео эффекта
+static int    EnterNameOn=0;
+static string PlayerName;
+static string OldName;
+static string SaveName[MAX_SAVE];
+static int    AddOnSlide = 0;
+
+ChangeMenuState(int new_menu_type)
+{
+  MenuState = new_menu_type;
+  Effect(EFF_FADE,0,0,FADE_GAME_TIME);
+  StartEffectTime = GetTime();
+}
+
+LoadPlayer(string name)
+{
+  int    i;
+  string load_path;
+  load_path = GetDefaultRegPath() + "\\"+name;
+
+  SetReg(GetDefaultRegPath(),"LevelNumber",GetReg(load_path,"LevelNumber",1));
+  SetReg(GetDefaultRegPath(),"GameType",GetReg(load_path,"GameType", GAME_TYPE_COMPAIGN));
+  SetReg(GetDefaultRegPath(),"PlayerName",GetReg(load_path,"PlayerName",GetString("menu","DefaultName")));
+  SetReg(GetDefaultRegPath(),"PlayerSex",GetReg(load_path,"PlayerSex","male"));
+  SetReg(GetDefaultRegPath(),"PlayerMoney",GetReg(load_path,"PlayerMoney",0));
+  SetReg(GetDefaultRegPath(),"PlayerScores",GetReg(load_path,"PlayerScores",0));
+  for( i = 0; i < 10; i++ )
+  {
+    SetReg(GetDefaultRegPath(),"PlayerAmmo"+itoa(i), GetReg(load_path,"PlayerAmmo"+itoa(i),0) );
+    SetReg(GetDefaultRegPath(),"PlayerWeapon"+itoa(i),GetReg(load_path,"PlayerWeapon"+itoa(i),0));
+  }
+  for( i = 0; i < 12; i++ )
+    SetReg(GetDefaultRegPath(),"PlayerItem"+itoa(i),GetReg(load_path,"PlayerItem"+itoa(i),0));
+
+  ReloadVidAndSetVidParameters();
+}
+//перегрузка всех VID т.к. в процессе предыдущих игр они могли помен€тьс€
+ResetGameParameters()
+{
+  int i;
+
+  SetReg(GetDefaultRegPath(),"LevelNumber",1);
+  SetReg(GetDefaultRegPath(),"PlayerMoney",20);
+  SetReg(GetDefaultRegPath(),"PlayerScores",0);
+  SetReg(GetDefaultRegPath(),"PlayerName",PlayerName);
+  for( i = 0; i < 10; i++ )
+  {
+    SetReg(GetDefaultRegPath(),"PlayerWeapon"+itoa(i),0);
+    SetReg(GetDefaultRegPath(),"PlayerAmmo"+itoa(i),0);
+  }
+  SetReg(GetDefaultRegPath(),"PlayerWeapon1",1);
+  SetReg(GetDefaultRegPath(),"PlayerAmmo1",999999);
+  for( i = 0; i< 12; i++ )
+    SetReg(GetDefaultRegPath(),"PlayerItem"+itoa(i),0);
+  SetReg(GetDefaultRegPath(),"PlayerItem"+itoa(7),2);//PlayerLife
+
+  ReloadVidAndSetVidParameters();
+}
+
+
+main()
+{
+  int menu,i;
+  iff( 1 )
+  {
+    SetCursor(CURSOR_NORMAL);
+//    PlayMusicFile("music\\menu_mus.ogg");
+    if( GetReg( GetDefaultRegPath(),"NewRecord",999 )!=999 )
+      ChangeMenuState(MENU_FAME);
+    else
+      ChangeMenuState(MENU_MAIN);
+    SetVidData(705,VID_GAMMA+1,0x7f7f7f);
+    for( i = 0; i < MAX_SAVE; i++ )
+    {
+      SaveName[i] = GetReg( GetDefaultRegPath(),"SaveName"+itoa(i),"" );
+      if( SaveName[i]=="" )
+        SaveName[i] = GetString("menu","Empty");
+//      else
+//        SaveName[i] = GetString("menu","Name") + SaveName[i] + " " + GetString("menu","Level") + itoa(GetReg(GetDefaultRegPath() + "\\"+SaveName[i],"LevelNumber",1));
+    }
+  }
+  if( MenuState==MENU_MAIN )//basemenu
+  {
+    if( StartEffectTime && (GetTime()-StartEffectTime) > FADE_GAME_TIME/2 )
+    {
+      StartEffectTime = 0;
+      MenuRelease();
+      MenuLoad("maps\\mainmenu.men");
+      if( GetReg( GetDefaultRegPath(),"SaveName0","" )=="" )
+      {
+//        MenuAction(705,5,ACT_SET_ARMY,1);
+        MenuAction(705,5,ANI_MENUDISABLE);
+      }
+    }
+    if( MenuLClick() && MenuNVidUnderCursor()==705 )
+    {
+      // не переходим к CONTINUE если save нет
+      if( MenuNDirUnderCursor()!=MENU_CONTINUE || GetReg( GetDefaultRegPath(),"SaveName0","" )!="" )
+        ChangeMenuState(MenuNDirUnderCursor());
+    }
+    if( GetKey()==' ' || GetKey()==13 )
+      ChangeMenuState(MENU_PLAY);
+    if( GetKey()==27 )
+      ChangeMenuState(MENU_EXIT);
+  }
+  else if( MenuState==MENU_CONTINUE )//Continue
+  {
+    if( StartEffectTime && GetEffectState(EFF_FADE) > 45 )
+    {
+      StartEffectTime = 0;
+      MenuRelease();
+      MenuLoad("maps\\load.men");
+      for( i = 0; i < MAX_SAVE; i++ )
+        if( GetReg( GetDefaultRegPath(),"SaveName"+itoa(i),"" )=="" )
+          MenuAction(705,i,ANI_MENUDISABLE);
+    }
+    if( GetKey()==VK_ESCAPE )
+      ChangeMenuState(MENU_MAIN);
+    else if( MenuLClick() && MenuNVidUnderCursor()==705 )
+      if( MenuNDirUnderCursor()==9 )
+        ChangeMenuState(MENU_MAIN);
+      else if( GetReg( GetDefaultRegPath(),"SaveName"+itoa(MenuNDirUnderCursor()),"" )!="" )
+      {
+        LoadPlayer(GetReg( GetDefaultRegPath(),"SaveName"+itoa(MenuNDirUnderCursor()),"" ));
+        ChangeMenuState(MENU_LOAD);
+      }
+  }
+  else if( MenuState==MENU_PLAY )//Play
+  {
+    if( StartEffectTime && GetEffectState(EFF_FADE) > 45 )
+    {
+      StartEffectTime = 0;
+      PlayerName = GetReg(GetDefaultRegPath(),"PlayerName",GetString("menu","DefaultName"));
+      MenuRelease();
+      MenuLoad("maps\\play.men");
+      if( GetReg(GetDefaultRegPath(),"PlayerSex","male")=="male" )
+        MenuAction(706,0,ANI_MENUSTANDUP);
+      else
+        MenuAction(707,0,ANI_MENUSTANDUP);
+
+    }
+    if( MenuLClick() )
+      if( MenuNVidUnderCursor()==706 )
+      {
+        MenuAction(706,0,ANI_MENUSTANDUP);
+        MenuAction(707,0,ANI_MENUSTANDDOWN);
+        SetReg(GetDefaultRegPath(),"PlayerSex","male");
+      }
+      else if( MenuNVidUnderCursor()==707 )
+      {
+        MenuAction(707,0,ANI_MENUSTANDUP);
+        MenuAction(706,0,ANI_MENUSTANDDOWN);
+        SetReg(GetDefaultRegPath(),"PlayerSex","female");
+      }
+      else if( MenuNVidUnderCursor()==705 )
+      {
+        if( MenuNDirUnderCursor()==0 )
+          ChangeMenuState(MENU_COMPAIGN);
+        else if( MenuNDirUnderCursor()==3 )
+          ChangeMenuState(MENU_ADDON);
+        else if( MenuNDirUnderCursor()==1 )
+          ChangeMenuState(MENU_SURVIVE);
+        else if( MenuNDirUnderCursor()==2 )
+          ChangeMenuState(MENU_MAIN);
+      }
+      else if( MenuNVidUnderCursor()==708 )//PlayerName
+      {
+        EnterNameOn = 1;
+        OldName = PlayerName;
+        if( PlayerName==GetString("menu","DefaultName") )
+          PlayerName = "";
+        PlayerName += "_";
+      }
+    if( EnterNameOn )
+    {// ¬вод имени игрока в процессе
+      if( GetKey()==VK_BACK && strlen(PlayerName) > 1 )
+      {
+        PlayerName[strlen(PlayerName)-2] = '_';
+        PlayerName[strlen(PlayerName)-1] = 0;
+      }
+      else if( GetKey()==VK_RETURN || (MenuLClick() && MenuNVidUnderCursor()!=708) )
+      {
+        EnterNameOn = 0;
+        PlayerName[strlen(PlayerName)-1] = 0;//убираем '_'
+      }
+      else if( GetKey()==VK_ESCAPE )
+      {
+        EnterNameOn = 0;
+        PlayerName = OldName;
+      }
+      else if( strlen(PlayerName) < 11 && GetKey() >= 'A' && GetKey() <= 'Z' )
+      {
+        PlayerName[strlen(PlayerName)-1] = 0;//убираем '_'
+        PlayerName += Printf("%c_",GetKey());
+      }
+      else if( strlen(PlayerName) < 11 && GetKey() >= 'a' && GetKey() <= 'z' )
+      {
+        PlayerName[strlen(PlayerName)-1] = 0;//убираем '_'
+        PlayerName += Printf("%c_",GetKey()-('a'-'A'));
+      }
+      else if( strlen(PlayerName) < 11 && GetKey() >= '0' && GetKey() <= '9' )
+      {
+        PlayerName[strlen(PlayerName)-1] = 0;//убираем '_'
+        PlayerName += Printf("%c_",GetKey());
+      }
+      else if( strlen(PlayerName) < 11 && GetKey()=='_' )
+      {
+        PlayerName[strlen(PlayerName)-1] = 0;//убираем '_'
+        PlayerName += Printf("%c_",GetKey());
+      }
+      else if( GetKey() && GetKey() < 255 )
+        PlaySFX(46);//нажата неверна€ клавиша
+    }
+    else if( GetKey()==VK_ESCAPE )
+      ChangeMenuState(MENU_MAIN);
+    else if( GetKey()==' ' || GetKey()==VK_RETURN )
+      ChangeMenuState(MENU_COMPAIGN);
+  }
+  else if( MenuState==MENU_OPTIONS )//Options
+  {
+    if( StartEffectTime && GetEffectState(EFF_FADE) > 45 )
+    {
+      StartEffectTime = 0;
+      CreateOptionsMenu("maps\\options.men");
+    }
+    if( MenuLClick() )
+      if( MenuNVidUnderCursor()==705 )
+      {
+        if( MenuNDirUnderCursor()==0 )
+          ChangeMenuState(MENU_MAIN);
+      }
+    if( GetKey()==27 )
+      ChangeMenuState(MENU_MAIN);
+    TactOptionsMenu();
+  }
+  else if( MenuState==MENU_FAME )//Hall of Fame
+  {
+    if( StartEffectTime && GetEffectState(EFF_FADE) > 45 )
+    {
+      StartEffectTime = 0;
+      MenuRelease();
+      DrawFame();
+    }
+    if( GetKey() || (GetInputState()&(INPUT_LCLICK|INPUT_RCLICK)) )
+      ChangeMenuState(MENU_MAIN);
+  }
+  else if( MenuState==3 )//Credits
+  {
+    if( StartEffectTime && GetEffectState(EFF_FADE) > 44 )
+    {
+      StartEffectTime = 0;
+      MenuRelease();
+      MenuLoad("maps\\credits.men");
+    }
+    if( GetKey() || (GetInputState()&(INPUT_LCLICK|INPUT_RCLICK)) )
+      ChangeMenuState(MENU_MAIN);
+  }
+  else if( MenuState==MENU_EXIT )//Quit
+  {
+    if( StartEffectTime && GetEffectState(EFF_FADE) > 44 )
+    {
+      StartEffectTime = 0;
+      Exit();
+    }
+  }
+  else if( MenuState==MENU_COMPAIGN )//Compaign
+  {
+    if( StartEffectTime && GetEffectState(EFF_FADE) > 45 )
+    {
+      StartEffectTime = 0;
+      ResetGameParameters();
+      SetReg(GetDefaultRegPath(),"GameType",GAME_TYPE_COMPAIGN);
+      Load("maps\\shop.map");
+    }
+  }
+  else if( MenuState==MENU_ADDON )//addon
+  {
+    int text = 0, text_count, old_time = 0;
+    if ( StartEffectTime && GetEffectState(EFF_FADE) > 45 )
+    {
+        StartEffectTime = 0;
+        if ( AddOnSlide > 4 )
+        {
+            ResetGameParameters();
+            SetReg(GetDefaultRegPath(),"GameType",GAME_TYPE_ADDON);
+            Load("maps\\shop.map");
+            return;
+        }
+        else
+        {
+            MenuRelease();
+            text_count = 0;
+            old_time = GetTime();
+            MenuCreate(954, AddOnSlide, ScreenX()/2, ScreenY()/2, 0 );
+//            text = CreateTextFromFile(3, ScreenX()/2 - 300, ScreenY()/2 + 150, 1, "Text\\addon_story_0" + itoa(++AddOnSlide) + ".txt");
+            text = CreateTextFromFile(3, 10, 10, 1, "Text\\addon_story_0" + itoa(++AddOnSlide) + ".txt");
+            Action(text, ACT_SET_TEXT_COUNT, text_count);
+        }
+    }
+    if ( !StartEffectTime )
+        if ( GetKey() || (GetInputState() & (INPUT_LCLICK | INPUT_RCLICK)) || (GetTime() - old_time) > 20000 )
+            if ( text_count )
+            {
+                Effect(EFF_FADE,0,0,FADE_GAME_TIME);
+                StartEffectTime = GetTime();
+            }
+            else
+            {
+                text_count = 10000;
+                Action(text, ACT_SET_TEXT_COUNT, text_count);
+    //            Action(text, ACT_SET_FILE, "Text\\addon_story_0" + itoa(AddOnSlide) + ".txt");
+            }
+    if ( GetKey() == 27 || (GetInputState() & INPUT_RCLICK) )
+    {
+        AddOnSlide = 5;
+        old_time = GetTime() - 20000;
+    }
+  }
+  else if( MenuState==MENU_SURVIVE )//Survive
+  {
+    if( StartEffectTime && GetEffectState(EFF_FADE) > 45 )
+    {
+      StartEffectTime = 0;
+      ResetGameParameters();
+      SetReg(GetDefaultRegPath(),"LevelNumber",-10);
+      SetReg(GetDefaultRegPath(),"GameType",GAME_TYPE_SURVIVE);
+      StopMusic();
+      Load("maps\\survive_01.map");
+    }
+  }
+  else if( MenuState==MENU_LOAD )//Load Compaign
+  {
+    if( StartEffectTime && GetEffectState(EFF_FADE) > 45 )
+    {
+      StartEffectTime = 0;
+      Load("maps\\shop.map");
+    }
+  }
+}

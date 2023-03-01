@@ -2,6 +2,7 @@
 #include <windows.h>
 #include "utils/console/console.h"
 #include "utils/hook/hook.h"
+#include "multiplayer.h"
 
 static HINSTANCE instance_handle = 0;
 
@@ -16,7 +17,11 @@ static bool dllmain_init(void)
     {
         if (hook_init())
         {
-            return true;
+            if (multiplayer_init())
+            {
+                return true;
+            }
+            hook_destroy();
         }
         console_destroy();
     }
@@ -25,6 +30,7 @@ static bool dllmain_init(void)
 
 static void dllmain_destroy(void)
 {
+    multiplayer_destroy();
     hook_destroy();
     console_destroy();
 }

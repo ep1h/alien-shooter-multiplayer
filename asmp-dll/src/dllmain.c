@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <windows.h>
 #include "utils/console/console.h"
+#include "utils/hook/hook.h"
 
 static HINSTANCE instance_handle = 0;
 
@@ -51,13 +52,18 @@ static bool dllmain_init(void)
 {
     if (console_init())
     {
-        return true;
+        if (hook_init())
+        {
+            return true;
+        }
+        console_destroy();
     }
     return false;
 }
 
 static void dllmain_destroy(void)
 {
+    hook_destroy();
     console_destroy();
 }
 

@@ -8,11 +8,32 @@ static int targetEditbox = 0;
 #define TARGET_EDITBOX_NAME    1
 #define TARGET_EDITBOX_ADDRESS 2
 
+#define STATUS_BAR_VID 2
+#define STATUS_BAR_NDIR 0
+
+#define SBH_NONE 0
+#define SBH_PRESSED_CONNECTION 1
+#define SBH_INVALID_NAME 2
+#define SBH_INVALID_ADDRESS 3
+#define SBH_CONNECTION 4
+
 
 int connectingAnimationTimer = 0;
-AnimateConnectingText()
+ProcessConnectingText()
 {
-  if( strlen(asmpStrConnecting) != 0 )
+  int hp;
+  hp = Action(MenuFind(STATUS_BAR_VID, STATUS_BAR_NDIR), ACT_GET_HP);
+  //MenuAction(2,0,ACT_GET_HP);
+
+  if( hp==SBH_INVALID_NAME)
+  {
+    asmpStrConnecting="Invalid name!";
+  }
+  else if( hp==SBH_INVALID_ADDRESS )
+  {
+    asmpStrConnecting="Invalid address!";
+  }
+  else if( hp==SBH_CONNECTION )
   {
     if( ( GetTime()-connectingAnimationTimer ) > 250 )
     {
@@ -37,11 +58,13 @@ CreateMultiplayerMenu()
   asmpStrConnecting = "";
   /* Male by default */
   MenuAction(706,0,ANI_MENUSTANDUP);
+
+  MenuAction(STATUS_BAR_VID, STATUS_BAR_NDIR, ACT_SET_HP, SBH_NONE);
 }
 
 TactMultiplayerMenu()
 {
-  AnimateConnectingText();
+  ProcessConnectingText();
 
   if( MenuLClick() )
   {
@@ -60,13 +83,12 @@ TactMultiplayerMenu()
 
 
     if( MenuNVidUnderCursor()==705 ) // Button
+  {
+    if( MenuNDirUnderCursor() == 1 ) // Connect
     {
-      if( MenuNDirUnderCursor() == 1 ) // Connect
-      {
-        // Show "connecting" text
-        asmpStrConnecting = "connecting";
-      }
+        MenuAction(STATUS_BAR_VID, STATUS_BAR_NDIR, ACT_SET_HP, SBH_PRESSED_CONNECTION);
     }
+  }
     else if( MenuNVidUnderCursor()==708 ) // EditBox
     {
       if( MenuNDirUnderCursor() == 0 ) // Name

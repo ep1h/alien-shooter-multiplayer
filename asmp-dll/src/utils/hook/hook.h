@@ -12,7 +12,7 @@
 
 /**
  * @brief Initializes the component.
- * 
+ *
  *        Initialization consists of allocating memory and initializing the
  *        container(s) to store information about installed hooks.
  *
@@ -23,14 +23,15 @@ bool hook_init(void);
 
 /**
  * @brief Sets a hook to a function. If successful, all subsequent calls to the
- *        function at \p ​​function_address will be redirected to \p hook_address
+ *        function at \p ​​function_address will be redirected to
+ *         \p hook_address
  *
  * @param[in] function_address Address of a function to be hooked.
  * @param[in] hook_address     Address where \p function_address function calls
  *                             should be redirected.
  * @param[in] size             Number of bytes to be overwritten by jmp at
  *                             \p hook_address . Minimum possible value is 5.
- * 
+ *
  * @return Address of a trampoline to original function.
  */
 void* hook_set(void* function_address, void* hook_address, unsigned char size);
@@ -42,6 +43,21 @@ void* hook_set(void* function_address, void* hook_address, unsigned char size);
  *                             set.
  */
 void hook_unset(void* function_address);
+
+/**
+ * @brief Sets a vmt hook to a function. If successful, all subsequent calls to
+ *        the method pointed to by the value at \p function_address_ptr will be
+ *        redirected \p hook_address .
+ *
+ * @param[in] function_address_ptr Address of a function pointer (in a virtual
+ *                                 function table) to be hooked.
+ * @param[in] hook_address         Address of a function with which the value at
+ *                                 \p function_address_ptr address should be
+ *                                  replaced.
+ *
+ * @return void* Original value at \p function_address_ptr address.
+ */
+void* hook_set_vmt(void** function_address_ptr, void* hook_address);
 
 /**
  * @brief Unset all hooks, frees all memory allocated by the component since

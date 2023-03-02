@@ -16,19 +16,38 @@ typedef struct TrampolineHook
     unsigned long size;
 } TrampolineHook;
 
+typedef struct VmtHook
+{
+    void** function_address_ptr;
+    void* orig_function_address; /* Required to unset hook */
+} VmtHook;
+
 static Map* trampoline_hooks_map_;
+static Map* vmt_hooks_map_;
 
 static void callback_unset_trampoline_hooks_(int key, void* data);
+static void callback_unset_vmt_hooks_(int key, void* data);
 static void* set_jmp_hook_(void* function_address, void* hook_address,
                            unsigned char size);
 static void unset_hook_(void* function_address, void* trampoline_address,
                         unsigned char size);
+static void* set_vmt_hook_(void** function_address_ptr, void* hook_address);
+static void unset_vmt_hook_(void** function_address_ptr,
+                            void* orig_funcion_address);
 
 static void callback_unset_trampoline_hooks_(int key, void* data)
 {
     (void)key;
     TrampolineHook* hook = (TrampolineHook*)data;
     unset_hook_(hook->function_address, hook->trampoline_address, hook->size);
+    mem_free(hook);
+}
+
+static void callback_unset_vmt_hooks_(int key, void* data)
+{
+    (void)key;
+    VmtHook* hook = (VmtHook*)data;
+    unset_vmt_hook_(hook->function_address_ptr, hook->orig_function_address);
     mem_free(hook);
 }
 
@@ -84,14 +103,58 @@ static void unset_hook_(void* function_address, void* trampoline_address,
     VirtualFree(trampoline_address, size, MEM_FREE);
 }
 
+static void* set_vmt_hook_(void** function_address_ptr, void* hook_address)
+{
+    if (!function_address_ptr || !*function_address_ptr || !hook_address)
+    {
+        return 0;
+    }
+    DWORD cur_prot = 0;
+    if (!VirtualProtect(function_address_ptr, 4, PAGE_EXECUTE_READWRITE,
+                        &cur_prot))
+    {
+        return 0;
+    }
+    void* orig_function_address = *function_address_ptr;
+    *function_address_ptr = hook_address;
+    DWORD tmp_prot = 0;
+    VirtualProtect(function_address_ptr, 4, cur_prot, &tmp_prot);
+    return orig_function_address;
+}
+
+static void unset_vmt_hook_(void** function_address_ptr,
+                            void* orig_funcion_address)
+{
+    if (!function_address_ptr || !*function_address_ptr ||
+        !orig_funcion_address)
+    {
+        return;
+    }
+    DWORD cur_prot = 0;
+    if (!VirtualProtect(function_address_ptr, 4, PAGE_EXECUTE_READWRITE,
+                        &cur_prot))
+    {
+        return;
+    }
+    *function_address_ptr = orig_funcion_address;
+    DWORD tmp_prot = 0;
+    VirtualProtect(function_address_ptr, 4, cur_prot, &tmp_prot);
+    return;
+}
+
 bool hook_init(void)
 {
     trampoline_hooks_map_ = map_create();
-    if (!trampoline_hooks_map_)
+    if (trampoline_hooks_map_)
     {
-        return false;
+        vmt_hooks_map_ = map_create();
+        if (vmt_hooks_map_)
+        {
+            return true;
+        }
+        map_destroy(trampoline_hooks_map_);
     }
-    return true;
+    return false;
 }
 
 void* hook_set(void* function_address, void* hook_address, unsigned char size)
@@ -134,9 +197,36 @@ void hook_unset(void* function_address)
     }
 }
 
+void* hook_set_vmt(void** function_address_ptr, void* hook_address)
+{
+    VmtHook* hook = mem_alloc(sizeof(VmtHook));
+    if (!hook)
+    {
+        return 0;
+    }
+    hook->orig_function_address =
+        set_vmt_hook_(function_address_ptr, hook_address);
+    if (!hook->orig_function_address)
+    {
+        mem_free(hook);
+        return 0;
+    }
+    if (!map_insert(vmt_hooks_map_, (int)hook_address, hook))
+    {
+        unset_vmt_hook_(function_address_ptr, hook->orig_function_address);
+        return 0;
+    }
+    hook->function_address_ptr = function_address_ptr;
+    return hook->orig_function_address;
+}
+
 void hook_destroy(void)
 {
     map_foreach(trampoline_hooks_map_, callback_unset_trampoline_hooks_);
     map_clear(trampoline_hooks_map_);
     map_destroy(trampoline_hooks_map_);
+
+    map_foreach(vmt_hooks_map_, callback_unset_vmt_hooks_);
+    map_clear(vmt_hooks_map_);
+    map_destroy(vmt_hooks_map_);
 }

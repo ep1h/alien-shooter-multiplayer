@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 #include "multiplayer.h"
 #include "utils/hook/hook.h"
 #include "game/addresses.h"
@@ -11,20 +12,55 @@ typedef enum State
 {
     STATE_NONE,
     STATE_PLAY_MENU,
+    STATE_CONNECTION,
 } State;
+
+typedef enum StatusBarHealth
+{
+    SBH_NONE = 0,
+    SBH_PRESSED_CONNECTION = 1,
+    SBH_INVALID_NAME = 2,
+    SBH_INVALID_ADDRESS = 3,
+    SBH_CONNECTION = 4,
+} StatusBarHealth;
 
 #define STATUSBAR_NDIR    0
 #define NAME_TEXT_NDIR    2
 #define ADDRESS_TEXT_NDIR 3
 
 static State state_ = STATE_NONE;
-
+static char ip_[16] = {0};
+static uint16_t port_ = 0;
 static load_menu_t load_menu_tramp_ = 0;
 static char mainmenu_file_[] = "maps\\asmp_mainmenu.men";
 
+static bool parse_address_(const char* str, char* ip, uint16_t* port);
 static int __stdcall _load_menu_hook(const char** menu_file);
 static int __thiscall _Game__tick_hook(Game* this);
 static bool set_hooks_(void);
+
+static bool parse_address_(const char* str, char* ip, uint16_t* port)
+{
+    char* colon_pos = strchr(str, ':');
+    if (!colon_pos)
+    {
+        return false;
+    }
+    uint32_t ip_len = colon_pos - str;
+    if (ip_len == 0 || ip_len >= 16)
+    {
+        return false;
+    }
+    uint32_t port_len = strlen(str) - ip_len - 1;
+    if (port_len == 0)
+    {
+        return false;
+    }
+    strncpy(ip, str, ip_len);
+    ip[ip_len] = '\0';
+    *port = atoi(colon_pos + 1);
+    return true;
+}
 
 static int __stdcall _load_menu_hook(const char** menu_file)
 {
@@ -59,6 +95,51 @@ static int __thiscall _Game__tick_hook(Game* this)
             // TODO: Something defenitely wrong. Throw an error.
             break;
         }
+
+        StatusBarHealth sbh = (StatusBarHealth)status_bar->entity.entity.health;
+        switch (sbh)
+        {
+        case SBH_PRESSED_CONNECTION: {
+            /* 'Connect' button has just been pressed */
+
+            /* Check entered name */
+            size_t name_len = strlen(name->text_70);
+            if (name_len == 0)
+            {
+                /* Invalid name len. Send error state to menu. */
+                status_bar->entity.entity.health = SBH_INVALID_NAME;
+                /* Reset state */
+                state_ = STATE_PLAY_MENU;
+                break;
+            }
+            /* Check entered address */
+            else if (!parse_address_(addr->text_70, ip_, &port_))
+            {
+                /* Address is not valid. Send error state to menu. */
+                status_bar->entity.entity.health = SBH_INVALID_ADDRESS;
+                /* Reset state*/
+                state_ = STATE_PLAY_MENU;
+                break;
+            }
+            else
+            {
+                /* Address is valid */
+                /* Send success state to menu (to display 'connecting...') */
+                status_bar->entity.entity.health = SBH_CONNECTION;
+                /* Switch to connection state */
+                state_ = STATE_CONNECTION;
+                break;
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+        }
+        break;
+    }
+    case STATE_CONNECTION: {
+
         break;
     }
     default:

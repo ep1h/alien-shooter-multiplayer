@@ -13,6 +13,7 @@ typedef enum State
     STATE_NONE,
     STATE_PLAY_MENU,
     STATE_CONNECTION,
+    STATE_CONNECTION_FAILED,
 } State;
 
 typedef enum StatusBarHealth
@@ -22,11 +23,13 @@ typedef enum StatusBarHealth
     SBH_INVALID_NAME = 2,
     SBH_INVALID_ADDRESS = 3,
     SBH_CONNECTION = 4,
+    SBH_CONNECTION_FAILED = 5,
 } StatusBarHealth;
 
-#define STATUSBAR_NDIR    0
-#define NAME_TEXT_NDIR    2
-#define ADDRESS_TEXT_NDIR 3
+#define STATUSBAR_NDIR     0
+#define NAME_TEXT_NDIR     2
+#define ADDRESS_TEXT_NDIR  3
+#define CONNECT_BUTTON_DIR 25 // NDIR = 1
 
 static State state_ = STATE_NONE;
 static char ip_[16] = {0};
@@ -99,7 +102,8 @@ static int __thiscall _Game__tick_hook(Game* this)
         StatusBarHealth sbh = (StatusBarHealth)status_bar->entity.entity.health;
         switch (sbh)
         {
-        case SBH_PRESSED_CONNECTION: {
+        case SBH_PRESSED_CONNECTION:
+        {
             /* 'Connect' button has just been pressed */
 
             /* Check entered name */
@@ -132,14 +136,49 @@ static int __thiscall _Game__tick_hook(Game* this)
             }
             break;
         }
-        default: {
+        default:
+        {
             break;
         }
         }
         break;
     }
-    case STATE_CONNECTION: {
+    case STATE_CONNECTION:
+    {
+        /* Disable 'CONNECT' button*/
+        Entity* connect_button = gameutils_get_menu_item(
+            VID_705_MENU_BUTTON_BACKGROUND, CONNECT_BUTTON_DIR);
+        if (!connect_button)
+        {
+            // TODO: Something defenitely wrong. Throw an error.
+            break;
+        }
+        Entity__set_anim(connect_button, 0, ANI_MENUDISABLEDOWN);
+        static int i = 0;
+        i++;
+        if (i % 500 == 0) // TODO: Just for tests. Should be removed.
+            state_ = STATE_CONNECTION_FAILED;
+        break;
+    }
+    case STATE_CONNECTION_FAILED:
+    {
+        /* Send connection-failed state to menu (to display error) */
+        EntText* status_bar = (EntText*)gameutils_get_menu_item(
+            VID_002_MENU_FONT, STATUSBAR_NDIR);
+        status_bar->entity.entity.health = SBH_CONNECTION_FAILED;
 
+        /* Enable 'CONNECT' button back */
+        Entity* connect_button = gameutils_get_menu_item(
+            VID_705_MENU_BUTTON_BACKGROUND, CONNECT_BUTTON_DIR);
+        if (!connect_button)
+        {
+            // TODO: Something defenitely wrong. Throw an error.
+            break;
+        }
+        Entity__set_anim(connect_button, 0, ANI_STAND);
+
+        /* Switch state back to PLAY_MENU */
+        state_ = STATE_PLAY_MENU;
         break;
     }
     default:

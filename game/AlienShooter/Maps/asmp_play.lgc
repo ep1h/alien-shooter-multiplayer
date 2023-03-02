@@ -16,7 +16,7 @@ static int targetEditbox = 0;
 #define SBH_INVALID_NAME 2
 #define SBH_INVALID_ADDRESS 3
 #define SBH_CONNECTION 4
-
+#define SBH_CONNECTION_FAILED 5
 
 int connectingAnimationTimer = 0;
 ProcessConnectingText()
@@ -47,6 +47,10 @@ ProcessConnectingText()
         asmpStrConnecting="connecting";
       }
     }
+  }
+  else if( hp==SBH_CONNECTION_FAILED )
+  {
+    asmpStrConnecting="Connection failed!";
   }
 }
 

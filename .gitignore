@@ -16,6 +16,8 @@
 !/asmp-dll/src
 !/asmp-dll/test
 
+!/common/
+
 !/game/
 /game/*
 !/game/AlienShooter/

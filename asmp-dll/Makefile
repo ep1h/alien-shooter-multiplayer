@@ -1,7 +1,7 @@
 # SETTINGS #####################################################################
 APP_NAME := asmp
 BUILD_DIR := build
-SRC_DIRS := src
+SRC_DIRS := src ../common/src
 TEST_SRC_DIRS := test/
 CC:=i686-w64-mingw32-gcc
 CXX:=i686-w64-mingw32-g++

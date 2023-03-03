@@ -1,6 +1,6 @@
 #include "../eztest/eztest.h"
-#include "multiplayer/net/server/server.h"
-#include "multiplayer/net/client/client.h"
+#include "net/server/server.h"
+#include "net/client/client.h"
 #include "utils/mem/mem.h"
 #include <winsock2.h>
 

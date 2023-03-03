@@ -1,5 +1,5 @@
 #include "../eztest/eztest.h"
-#include "multiplayer/net/socket/socket.h"
+#include "net/socket/socket.h"
 #include "utils/mem/mem.h"
 #include <winsock2.h>
 

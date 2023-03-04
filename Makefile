@@ -1,13 +1,17 @@
-.PHONY: asmp-dll test build test clean help
+.PHONY: asmp-dll asmp-server test build test clean help
 
 asmp-dll:
 	$(MAKE) -C asmp-dll $(filter-out $@,$(MAKECMDGOALS))
+
+asmp-server:
+	$(MAKE) -C asmp-server $(filter-out $@,$(MAKECMDGOALS))
 
 test:
 	$(MAKE) -C test $(filter-out $@,$(MAKECMDGOALS))
 
 all:
 	$(MAKE) -C asmp-dll $(filter-out $@,$(MAKECMDGOALS))
+	$(MAKE) -C asmp-server $(filter-out $@,$(MAKECMDGOALS))
 	$(MAKE) -C test $(filter-out $@,$(MAKECMDGOALS))
 
 help:
@@ -15,9 +19,10 @@ help:
 	@echo "Usage: make [COMPONENT] [TARGET] [VARIABLES]"
 	@echo ""
 	@echo "Components:"
-	@echo "  asmp-dll - client (asmp.dll)"
-	@echo "  test     - tests"
-	@echo "  all      - all components"
+	@echo "  asmp-dll    - client (asmp.dll)"
+	@echo "  asmp-server - server (asmp-server.exe)"
+	@echo "  test        - tests"
+	@echo "  all         - all components"
 	@echo ""
 	@echo "Targets:"
 	@echo "  build - build a component of the project"

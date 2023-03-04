@@ -18,6 +18,7 @@
 
 !/asmp-server/
 /asmp-server/*
+!/asmp-server/Makefile
 !/asmp-server/README.md
 
 !/asmp-server/src

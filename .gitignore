@@ -28,3 +28,10 @@
 !/game/AlienShooter/Maps/asmp_play.lgc
 !/game/AlienShooter/Maps/asmp_play.men
 !/game/AlienShooter/Maps/MAINMENU.lgc
+
+!/test
+/test/*
+!/test/Makefile
+!/test/README.md
+!/test/src/
+!/test/eztest

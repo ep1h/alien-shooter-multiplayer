@@ -16,6 +16,10 @@
 !/asmp-dll/src
 !/asmp-dll/test
 
+!/asmp-server/
+/asmp-server/*
+!/asmp-server/README.md
+
 !/common/
 
 !/game/

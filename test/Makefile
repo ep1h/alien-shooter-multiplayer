@@ -1,18 +1,18 @@
 # SETTINGS #####################################################################
-APP_NAME := asmp
+APP_NAME = test_$(ENTRY)
 BUILD_DIR := build
-SRC_DIRS := src ../common/src
-CC:=i686-w64-mingw32-gcc
-CXX:=i686-w64-mingw32-g++
+SRC_DIRS := src ../common/src ../asmp-dll/src
+CC:=gcc #i686-w64-mingw32-gcc
+CXX:=g++ #i686-w64-mingw32-g++
 LINKER := $(CXX)
 STATIC_LIBS := -lSynchronization -lws2_32
 # RELEASE
-CC_CMP_FLAGS_RELEASE := -O3 -Wall -Wextra -Werror
-CXX_CMP_FLAGS_RELEASE := $(CC_CMP_FLAGS_RELEASE)
-LINK_FLAGS_RELEASE := -static -shared $(STATIC_LIBS)
+CC_CMP_FLAGS_RELEASE = -O3 -Wall -Wextra -Werror -D EZTEST -D FILENAME=$(basename $(notdir $<))
+CXX_CMP_FLAGS_RELEASE = $(CC_CMP_FLAGS_RELEASE)
+LINK_FLAGS_RELEASE := -static $(STATIC_LIBS) -Wl,--entry=_$(ENTRY)
 # DEBUG
-CC_CMP_FLAGS_DEBUG := -O0 -g -D DEBUG_
-CXX_CMP_FLAGS_DEBUG := $(CC_CMP_FLAGS_DEBUG)
+CC_CMP_FLAGS_DEBUG = -O0 -g -D DEBUG_ -D EZTEST -D FILENAME=$(basename $(notdir $<))
+CXX_CMP_FLAGS_DEBUG = $(CC_CMP_FLAGS_DEBUG)
 LINK_FLAGS_DEBUG := $(LINK_FLAGS_RELEASE)
 
 # IMPLEMENTATION ###############################################################
@@ -25,13 +25,13 @@ ifeq ($(CFG),debug)
     CC_CMP_FLAGS = $(CC_CMP_FLAGS_DEBUG)
     CXX_CMP_FLAGS = $(CXX_CMP_FLAGS_DEBUG)
     LINK_FLAGS := $(LINK_FLAGS_DEBUG)
-    APP_NAME := $(APP_NAME)_dbg.dll
+    APP_NAME := $(APP_NAME)_dbg.exe
     _BUILD_DIR := debug
 else
     CC_CMP_FLAGS = $(CC_CMP_FLAGS_RELEASE)
     CXX_CMP_FLAGS = $(CXX_CMP_FLAGS_RELEASE)
     LINK_FLAGS := $(LINK_FLAGS_RELEASE)
-    APP_NAME := $(APP_NAME).dll
+    APP_NAME := $(APP_NAME).exe
     _BUILD_DIR := release
 endif
 
@@ -74,7 +74,7 @@ help:
 	@echo "Usage: make [TARGET] [VARIABLES]"
 	@echo ""
 	@echo "Targets:"
-	@echo "  build       - build the project"
+	@echo "  build       - build tests"
 	@echo "  clean       - remove $(BUILD_DIR)"
 	@echo "  help        - display this help message (default)"
 	@echo ""
@@ -84,6 +84,5 @@ help:
 	@echo ""
 	@echo "Examples:"
 	@echo "  make                   - display this help message"
-	@echo "  make build             - build the project"
-	@echo "  make build CFG=debug   - build the project without optimizations"
-	@echo "                           and include debugging information"
+	@echo "  make build ENTRY=map_tests - build tests. Function 'map_tests"
+	@echo "                               (which calls all tests) must exists"

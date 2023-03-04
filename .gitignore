@@ -20,6 +20,8 @@
 /asmp-server/*
 !/asmp-server/README.md
 
+!/asmp-server/src
+
 !/common/
 
 !/game/

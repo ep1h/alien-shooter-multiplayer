@@ -1,22 +1,39 @@
-#ifndef NET_CLIENT_CLIENT_H
-#define NET_CLIENT_CLIENT_H
+#ifndef NET_CLIENT
+#define NET_CLIENT
 
-#include <stdbool.h>
 #include "../types.h"
 
+#include <stdbool.h>
+
 typedef struct NetClient NetClient;
+
+typedef enum NetClientState
+{
+    NCS_UNINITED = 0,
+    NCS_INITED,
+    NCS_CONNECTING,
+    NCS_CONNECTED,
+    NCS_CONNECTION_FAILED,
+    NCS_DISCONNECTION,
+    NCS_DISCONNECTED,
+} NetClientState;
 
 NetClient* net_client_create(void);
 void net_client_destroy(NetClient* client);
 
-bool net_client_connect(NetClient* client, const char* ip, unsigned short port);
+bool net_client_connection_request(NetClient* client, const char* ip,
+                                   NetPort port);
 void net_client_disconnect(NetClient* client);
+
+void net_client_tick(NetClient* client);
 
 int net_client_dequeue_packet(NetClient* client, NetPacket* packet);
 void net_client_send(NetClient* client, const void* buf, int size,
                      NetPriority priority);
 
-bool net_client_is_connected(NetClient* client);
-NetClientId net_client_get_id(NetClient* client);
+NetClientState net_client_get_state(NetClient* client);
 
-#endif /* NET_CLIENT_CLIENT_H */
+bool net_client_get_server_info(NetClient* client,
+                                NetServerInfo* const out_server_info);
+
+#endif /* NET_CLIENT */

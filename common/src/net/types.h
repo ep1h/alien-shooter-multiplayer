@@ -4,6 +4,7 @@
 typedef unsigned char NetClientId;
 typedef unsigned char NetPriority;
 typedef unsigned long NetTime;
+typedef unsigned short NetPort;
 
 #define NET_CLIENT_ID_INVALID      ((NetClientId)0b11111110)
 #define NET_CLIENT_ID_ALL          ((NetClientId)0b11111111)

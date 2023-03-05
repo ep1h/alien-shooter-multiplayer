@@ -132,7 +132,6 @@ static void recv_loop_(NetServer* server)
         }
         else if (size == NET_SOCKET_ERROR_TIMEDOUT)
         {
-            // printf("net s r recv timeout\n");
         }
         kick_delayed_clients_(server);
     }

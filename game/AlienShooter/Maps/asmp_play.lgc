@@ -11,12 +11,13 @@ static int targetEditbox = 0;
 #define STATUS_BAR_VID 2
 #define STATUS_BAR_NDIR 0
 
-#define SBH_NONE 0
-#define SBH_PRESSED_CONNECTION 1
-#define SBH_INVALID_NAME 2
-#define SBH_INVALID_ADDRESS 3
-#define SBH_CONNECTION 4
-#define SBH_CONNECTION_FAILED 5
+#define SPMS_IDLE 0
+#define SPMS_CONNECT_PRESSED 1
+#define SPMS_INVALID_NAME 2
+#define SPMS_INVALID_ADDRESS 3
+#define SPMS_CONNECTING 4
+#define SPMS_CONNECTION_FAILED 5
+#define SPMS_CONNECTED 6
 
 int connectingAnimationTimer = 0;
 ProcessConnectingText()
@@ -25,15 +26,15 @@ ProcessConnectingText()
   hp = Action(MenuFind(STATUS_BAR_VID, STATUS_BAR_NDIR), ACT_GET_HP);
   //MenuAction(2,0,ACT_GET_HP);
 
-  if( hp==SBH_INVALID_NAME)
+  if( hp==SPMS_INVALID_NAME)
   {
     asmpStrConnecting="Invalid name!";
   }
-  else if( hp==SBH_INVALID_ADDRESS )
+  else if( hp==SPMS_INVALID_ADDRESS )
   {
     asmpStrConnecting="Invalid address!";
   }
-  else if( hp==SBH_CONNECTION )
+  else if( hp==SPMS_CONNECTING )
   {
     if( ( GetTime()-connectingAnimationTimer ) > 250 )
     {
@@ -48,9 +49,14 @@ ProcessConnectingText()
       }
     }
   }
-  else if( hp==SBH_CONNECTION_FAILED )
+  else if( hp==SPMS_CONNECTION_FAILED )
   {
     asmpStrConnecting="Connection failed!";
+  }
+  else if( hp==SPMS_CONNECTED )
+  {
+    MenuRelease();
+    Load("maps\\survive_01.map");
   }
 }
 
@@ -63,7 +69,7 @@ CreateMultiplayerMenu()
   /* Male by default */
   MenuAction(706,0,ANI_MENUSTANDUP);
 
-  MenuAction(STATUS_BAR_VID, STATUS_BAR_NDIR, ACT_SET_HP, SBH_NONE);
+  MenuAction(STATUS_BAR_VID, STATUS_BAR_NDIR, ACT_SET_HP, SPMS_IDLE);
 }
 
 TactMultiplayerMenu()
@@ -90,7 +96,7 @@ TactMultiplayerMenu()
   {
     if( MenuNDirUnderCursor() == 1 ) // Connect
     {
-        MenuAction(STATUS_BAR_VID, STATUS_BAR_NDIR, ACT_SET_HP, SBH_PRESSED_CONNECTION);
+        MenuAction(STATUS_BAR_VID, STATUS_BAR_NDIR, ACT_SET_HP, SPMS_CONNECT_PRESSED);
     }
   }
     else if( MenuNVidUnderCursor()==708 ) // EditBox

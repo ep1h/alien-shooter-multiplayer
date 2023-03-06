@@ -7,40 +7,86 @@
 #include "utils/console/console.h"
 #include "gameutils.h"
 #include "game/types/entities/EntText.h"
-
-typedef enum State
-{
-    STATE_NONE,
-    STATE_PLAY_MENU,
-    STATE_CONNECTION,
-    STATE_CONNECTION_FAILED,
-} State;
-
-typedef enum StatusBarHealth
-{
-    SBH_NONE = 0,
-    SBH_PRESSED_CONNECTION = 1,
-    SBH_INVALID_NAME = 2,
-    SBH_INVALID_ADDRESS = 3,
-    SBH_CONNECTION = 4,
-    SBH_CONNECTION_FAILED = 5,
-} StatusBarHealth;
+#include "net/client/client.h"
 
 #define STATUSBAR_NDIR     0
 #define NAME_TEXT_NDIR     2
 #define ADDRESS_TEXT_NDIR  3
 #define CONNECT_BUTTON_DIR 25 // NDIR = 1
 
+typedef enum State
+{
+    STATE_NONE,
+    STATE_PLAY_MENU,
+    STATE_CONNECTED,
+} State;
+
+typedef enum StatePlayMenuSubstate
+{
+    SPMS_IDLE = 0,
+    SPMS_CONNECT_PRESSED = 1,
+    SPMS_INVALID_NAME = 2,
+    SPMS_INVALID_ADDRESS = 3,
+    SPMS_CONNECTING = 4,
+    SPMS_CONNECTION_FAILED = 5,
+    SPMS_CONNECTED = 6
+} StatePlayMenuSubstate;
+
+typedef struct PlayMenu
+{
+    EntText* nickname;
+    EntText* address;
+    EntText* status;
+    Entity* connect_button;
+} PlayMenu;
+
 static State state_ = STATE_NONE;
 static char ip_[16] = {0};
 static uint16_t port_ = 0;
 static load_menu_t load_menu_tramp_ = 0;
 static char mainmenu_file_[] = "maps\\asmp_mainmenu.men";
+static NetClient* client_;
 
+static bool read_play_menu_(PlayMenu* out_play_menu);
 static bool parse_address_(const char* str, char* ip, uint16_t* port);
 static int __stdcall _load_menu_hook(const char** menu_file);
 static int __thiscall _Game__tick_hook(Game* this);
+static void state_play_menu_handler_(void);
+static void state_connected_handler_(void);
 static bool set_hooks_(void);
+
+static bool read_play_menu_(PlayMenu* out_play_menu)
+{
+    if (out_play_menu)
+    {
+        EntText* name = (EntText*)gameutils_get_menu_item(
+            VID_004_MENU_FONT_SMALL, NAME_TEXT_NDIR);
+        if (name)
+        {
+            EntText* addr = (EntText*)gameutils_get_menu_item(
+                VID_004_MENU_FONT_SMALL, ADDRESS_TEXT_NDIR);
+            if (addr)
+            {
+                EntText* status_bar = (EntText*)gameutils_get_menu_item(
+                    VID_002_MENU_FONT, STATUSBAR_NDIR);
+                if (status_bar)
+                {
+                    Entity* connect_button = gameutils_get_menu_item(
+                        VID_705_MENU_BUTTON_BACKGROUND, CONNECT_BUTTON_DIR);
+                    if (connect_button)
+                    {
+                        out_play_menu->nickname = name;
+                        out_play_menu->address = addr;
+                        out_play_menu->status = status_bar;
+                        out_play_menu->connect_button = connect_button;
+                    }
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
 
 static bool parse_address_(const char* str, char* ip, uint16_t* port)
 {
@@ -70,6 +116,8 @@ static int __stdcall _load_menu_hook(const char** menu_file)
     console_log("load_menu: %s\n", *menu_file);
     if (strcmp(*menu_file, "maps\\mainmenu.men") == 0)
     {
+        net_client_disconnect(client_);
+        state_ = STATE_NONE;
         char* p = mainmenu_file_;
         return load_menu_tramp_((const char**)&p);
     }
@@ -82,103 +130,17 @@ static int __stdcall _load_menu_hook(const char** menu_file)
 
 static int __thiscall _Game__tick_hook(Game* this)
 {
+    net_client_tick(client_);
     switch (state_)
     {
     case STATE_PLAY_MENU:
     {
-        EntText* name = (EntText*)gameutils_get_menu_item(
-            VID_004_MENU_FONT_SMALL, NAME_TEXT_NDIR);
-        EntText* addr = (EntText*)gameutils_get_menu_item(
-            VID_004_MENU_FONT_SMALL, ADDRESS_TEXT_NDIR);
-        EntText* status_bar = (EntText*)gameutils_get_menu_item(
-            VID_002_MENU_FONT, STATUSBAR_NDIR);
-
-        if (!name || !addr || !status_bar)
-        {
-            // TODO: Something defenitely wrong. Throw an error.
-            break;
-        }
-
-        StatusBarHealth sbh = (StatusBarHealth)status_bar->entity.entity.health;
-        switch (sbh)
-        {
-        case SBH_PRESSED_CONNECTION:
-        {
-            /* 'Connect' button has just been pressed */
-
-            /* Check entered name */
-            size_t name_len = strlen(name->text_70);
-            if (name_len == 0)
-            {
-                /* Invalid name len. Send error state to menu. */
-                status_bar->entity.entity.health = SBH_INVALID_NAME;
-                /* Reset state */
-                state_ = STATE_PLAY_MENU;
-                break;
-            }
-            /* Check entered address */
-            else if (!parse_address_(addr->text_70, ip_, &port_))
-            {
-                /* Address is not valid. Send error state to menu. */
-                status_bar->entity.entity.health = SBH_INVALID_ADDRESS;
-                /* Reset state*/
-                state_ = STATE_PLAY_MENU;
-                break;
-            }
-            else
-            {
-                /* Address is valid */
-                /* Send success state to menu (to display 'connecting...') */
-                status_bar->entity.entity.health = SBH_CONNECTION;
-                /* Switch to connection state */
-                state_ = STATE_CONNECTION;
-                break;
-            }
-            break;
-        }
-        default:
-        {
-            break;
-        }
-        }
+        state_play_menu_handler_();
         break;
     }
-    case STATE_CONNECTION:
+    case STATE_CONNECTED:
     {
-        /* Disable 'CONNECT' button*/
-        Entity* connect_button = gameutils_get_menu_item(
-            VID_705_MENU_BUTTON_BACKGROUND, CONNECT_BUTTON_DIR);
-        if (!connect_button)
-        {
-            // TODO: Something defenitely wrong. Throw an error.
-            break;
-        }
-        Entity__set_anim(connect_button, 0, ANI_MENUDISABLEDOWN);
-        static int i = 0;
-        i++;
-        if (i % 500 == 0) // TODO: Just for tests. Should be removed.
-            state_ = STATE_CONNECTION_FAILED;
-        break;
-    }
-    case STATE_CONNECTION_FAILED:
-    {
-        /* Send connection-failed state to menu (to display error) */
-        EntText* status_bar = (EntText*)gameutils_get_menu_item(
-            VID_002_MENU_FONT, STATUSBAR_NDIR);
-        status_bar->entity.entity.health = SBH_CONNECTION_FAILED;
-
-        /* Enable 'CONNECT' button back */
-        Entity* connect_button = gameutils_get_menu_item(
-            VID_705_MENU_BUTTON_BACKGROUND, CONNECT_BUTTON_DIR);
-        if (!connect_button)
-        {
-            // TODO: Something defenitely wrong. Throw an error.
-            break;
-        }
-        Entity__set_anim(connect_button, 0, ANI_STAND);
-
-        /* Switch state back to PLAY_MENU */
-        state_ = STATE_PLAY_MENU;
+        state_connected_handler_();
         break;
     }
     default:
@@ -187,6 +149,93 @@ static int __thiscall _Game__tick_hook(Game* this)
     }
     }
     return ((Game__tick_t)FUNC_GAME_TICK)(ECX, EDX);
+}
+
+static void state_play_menu_handler_(void)
+{
+    PlayMenu play_menu = {0};
+    if (!read_play_menu_(&play_menu))
+    {
+        // TODO: Something defenitely wrong. Throw an error.
+        return;
+    }
+    StatePlayMenuSubstate substate = play_menu.status->entity.entity.health;
+    switch (substate)
+    {
+    case SPMS_CONNECT_PRESSED:
+    {
+        /* Check entered name */
+        size_t name_len = strlen(play_menu.nickname->text_70);
+        if (name_len == 0)
+        {
+            /* Invalid name len */
+            substate = SPMS_INVALID_NAME;
+        }
+        /* Check entered address */
+        else if (!parse_address_(play_menu.address->text_70, ip_, &port_))
+        {
+            /* Invalid address. */
+            substate = SPMS_INVALID_ADDRESS;
+        }
+        else
+        {
+            if (net_client_connection_request(client_, ip_, port_))
+            {
+                /* Disable button */
+                Entity__set_anim(play_menu.connect_button, 0,
+                                 ANI_MENUDISABLEDOWN);
+                substate = SPMS_CONNECTING;
+            }
+            else
+            {
+                substate = SPMS_CONNECTION_FAILED;
+            }
+        }
+        break;
+    }
+    case SPMS_INVALID_NAME:
+    {
+        break;
+    }
+    case SPMS_INVALID_ADDRESS:
+    {
+        break;
+    }
+    case SPMS_CONNECTING:
+    {
+        NetClientState ncs = net_client_get_state(client_);
+        if (ncs == NCS_CONNECTED)
+        {
+            substate = SPMS_CONNECTED;
+        }
+        else if (ncs == NCS_CONNECTION_FAILED)
+        {
+            substate = SPMS_CONNECTION_FAILED;
+        }
+        break;
+    }
+    case SPMS_CONNECTION_FAILED:
+    {
+        /* Enable 'CONNECT' button */
+        Entity__set_anim(play_menu.connect_button, 0, ANI_STAND);
+        break;
+    }
+    case SPMS_CONNECTED:
+    {
+        state_ = STATE_CONNECTED;
+        break;
+    }
+    case SPMS_IDLE:
+    default:
+    {
+        break;
+    }
+    }
+    play_menu.status->entity.entity.health = substate;
+}
+
+static void state_connected_handler_(void)
+{
 }
 
 static bool set_hooks_(void)
@@ -206,11 +255,16 @@ bool multiplayer_init(void)
 {
     if (set_hooks_())
     {
-        return true;
+        client_ = net_client_create();
+        if (client_)
+        {
+            return true;
+        }
     }
     return false;
 }
 
 void multiplayer_destroy(void)
 {
+    net_client_destroy(client_);
 }

@@ -7,7 +7,7 @@
 #include "utils/console/console.h"
 #include "gameutils.h"
 #include "game/types/entities/EntText.h"
-#include "net/client/client.h"
+#include "client/client.h"
 
 #define STATUSBAR_NDIR     0
 #define NAME_TEXT_NDIR     2
@@ -45,7 +45,7 @@ static char ip_[16] = {0};
 static uint16_t port_ = 0;
 static load_menu_t load_menu_tramp_ = 0;
 static char mainmenu_file_[] = "maps\\asmp_mainmenu.men";
-static NetClient* client_;
+static MpClient* client_;
 
 static bool read_play_menu_(PlayMenu* out_play_menu);
 static bool parse_address_(const char* str, char* ip, uint16_t* port);
@@ -116,7 +116,7 @@ static int __stdcall _load_menu_hook(const char** menu_file)
     console_log("load_menu: %s\n", *menu_file);
     if (strcmp(*menu_file, "maps\\mainmenu.men") == 0)
     {
-        net_client_disconnect(client_);
+        mp_client_disconnect(client_);
         state_ = STATE_NONE;
         char* p = mainmenu_file_;
         return load_menu_tramp_((const char**)&p);
@@ -130,7 +130,7 @@ static int __stdcall _load_menu_hook(const char** menu_file)
 
 static int __thiscall _Game__tick_hook(Game* this)
 {
-    net_client_tick(client_);
+    mp_client_tick(client_);
     switch (state_)
     {
     case STATE_PLAY_MENU:
@@ -179,7 +179,8 @@ static void state_play_menu_handler_(void)
         }
         else
         {
-            if (net_client_connection_request(client_, ip_, port_))
+            if (mp_client_connection_request(client_, ip_, port_,
+                                             play_menu.nickname->text_70))
             {
                 /* Disable button */
                 Entity__set_anim(play_menu.connect_button, 0,
@@ -203,12 +204,12 @@ static void state_play_menu_handler_(void)
     }
     case SPMS_CONNECTING:
     {
-        NetClientState ncs = net_client_get_state(client_);
-        if (ncs == NCS_CONNECTED)
+        MpClientState mcs = mp_client_get_state(client_);
+        if (mcs == MPS_CONNECTED)
         {
             substate = SPMS_CONNECTED;
         }
-        else if (ncs == NCS_CONNECTION_FAILED)
+        else if (mcs == MPS_CONNECTION_FAILED)
         {
             substate = SPMS_CONNECTION_FAILED;
         }
@@ -255,7 +256,7 @@ bool multiplayer_init(void)
 {
     if (set_hooks_())
     {
-        client_ = net_client_create();
+        client_ = mp_client_create();
         if (client_)
         {
             return true;
@@ -266,5 +267,5 @@ bool multiplayer_init(void)
 
 void multiplayer_destroy(void)
 {
-    net_client_destroy(client_);
+    mp_client_destroy(client_);
 }

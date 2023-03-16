@@ -3,6 +3,7 @@
 
 !/.gitignore
 !/.gitmodules
+!/AlienShooter.exe.idb
 !/Makefile
 !/README.md
 

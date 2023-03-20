@@ -36,4 +36,6 @@ NetClientState net_client_get_state(NetClient* client);
 bool net_client_get_server_info(NetClient* client,
                                 NetServerInfo* const out_server_info);
 
+NetClientId net_client_get_id(NetClient* client);
+
 #endif /* NET_CLIENT */

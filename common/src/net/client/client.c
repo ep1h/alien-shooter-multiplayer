@@ -347,3 +347,12 @@ bool net_client_get_server_info(NetClient* client,
     }
     return false;
 }
+
+NetClientId net_client_get_id(NetClient* client)
+{
+    if (client)
+    {
+        return client->id;
+    }
+    return NET_CLIENT_ID_INVALID;
+}

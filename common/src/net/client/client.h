@@ -33,8 +33,7 @@ void net_client_send(NetClient* client, const void* buf, int size,
 
 NetClientState net_client_get_state(NetClient* client);
 
-bool net_client_get_server_info(NetClient* client,
-                                NetServerInfo* const out_server_info);
+const NetServerInfo* net_client_get_server_info(NetClient* client);
 
 NetClientId net_client_get_id(NetClient* client);
 

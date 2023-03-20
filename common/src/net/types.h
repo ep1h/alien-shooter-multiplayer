@@ -23,13 +23,6 @@ typedef enum NetPacketType
     NPT_VIRTUAL, /* Events from server to server */
 } NetPacketType;
 
-typedef enum NetVirtualPacketType
-{
-    NVPT_EMPTY = 0,
-    NVPT_CLIENT_CONNECTED,
-    NVPT_CLIENT_DISCONNECTED,
-} NetVirtualPacketType;
-
 typedef struct NetServerInfo
 {
     NetClientId max_clients;
@@ -70,13 +63,5 @@ typedef struct NetPacketSync
 {
     NetPacketHead head;
 } NetPacketSync;
-
-// TODO: Forbid to send virtual packets to clients.
-// TODO: Remove virtual packets from client's namespace.
-typedef struct NetPacketVirtual
-{
-    NetPacketHead head;
-    NetVirtualPacketType virtual_type;
-} NetPacketVirtual;
 
 #endif /* MULTIPLAYER_NET_TYPES_H */

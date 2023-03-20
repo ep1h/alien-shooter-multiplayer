@@ -336,16 +336,13 @@ NetClientState net_client_get_state(NetClient* client)
     return 0;
 }
 
-bool net_client_get_server_info(NetClient* client,
-                                NetServerInfo* const out_server_info)
+const NetServerInfo* net_client_get_server_info(NetClient* client)
 {
     if (client)
     {
-        mem_copy(out_server_info, &client->server_info,
-                 sizeof(*out_server_info));
-        return true;
+        return &client->server_info;
     }
-    return false;
+    return 0;
 }
 
 NetClientId net_client_get_id(NetClient* client)

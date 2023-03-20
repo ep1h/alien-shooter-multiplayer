@@ -179,18 +179,11 @@ static void state_play_menu_handler_(void)
         }
         else
         {
-            if (mp_client_connection_request(client_, ip_, port_,
-                                             play_menu.nickname->text_70))
-            {
-                /* Disable button */
-                Entity__set_anim(play_menu.connect_button, 0,
-                                 ANI_MENUDISABLEDOWN);
-                substate = SPMS_CONNECTING;
-            }
-            else
-            {
-                substate = SPMS_CONNECTION_FAILED;
-            }
+            mp_client_connection_request(client_, ip_, port_,
+                                         play_menu.nickname->text_70);
+            /* Disable button */
+            Entity__set_anim(play_menu.connect_button, 0, ANI_MENUDISABLEDOWN);
+            substate = SPMS_CONNECTING;
         }
         break;
     }

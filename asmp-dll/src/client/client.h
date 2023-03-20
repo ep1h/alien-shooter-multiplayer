@@ -18,7 +18,7 @@ typedef enum MpClientState
 
 MpClient* mp_client_create(void);
 void mp_client_destroy(MpClient* client);
-bool mp_client_connection_request(MpClient* client, const char* ip,
+void mp_client_connection_request(MpClient* client, const char* ip,
                                   unsigned short port, const char* name);
 void mp_client_disconnect(MpClient* client);
 

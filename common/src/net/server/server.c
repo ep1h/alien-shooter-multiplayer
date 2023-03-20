@@ -2,7 +2,6 @@
 #include <winsock2.h>
 #include "../socket/socket.h"
 #include "utils/mem/mem.h"
-#include "utils/containers/queue/queue.h"
 #include "utils/containers/pqueue/pqueue.h"
 #include "utils/event/event.h"
 #include "utils/thread/thread.h"
@@ -25,7 +24,6 @@ typedef struct Client
 typedef struct NetServer
 {
     NetSocket* socket;
-    Queue* recv_queue;   /* PQueue of PacketInfo */
     PQueue* send_pqueue; /* PQueue of SendPacketInfo */
     Event* send_event;
     Thread* recv_thread;
@@ -34,6 +32,9 @@ typedef struct NetServer
     LoopStatus recv_loop_status;
     LoopStatus send_loop_status;
     NetServerInfo info;
+    void (*recv_callback)(NetPacket* packet, int size);
+    void (*connect_callback)(NetClientId id);
+    void (*disconnect_callback)(NetClientId id);
 } NetServer;
 
 typedef struct PacketInfo
@@ -54,7 +55,6 @@ static NetClientId connect_client_(NetServer* server,
                                    const struct sockaddr_in* address);
 static void disconnect_client_(NetServer* server, NetClientId id);
 static void kick_delayed_clients_(NetServer* server);
-static void clear_recv_queue_(NetServer* server);
 static void clear_send_pqueue_(NetServer* server);
 static void request_stop_recv_loop_(NetServer* server);
 static void request_stop_send_loop_(NetServer* server);
@@ -117,10 +117,10 @@ static void recv_loop_(NetServer* server)
                 {
                     server->clients[p->head.sender].last_recvfrom_time_ms =
                         time_get_ms();
-                    PacketInfo* pi = mem_alloc(sizeof(PacketInfo) + size);
-                    pi->size = size;
-                    mem_copy(&pi->packet, p, size);
-                    queue_queue(server->recv_queue, pi);
+                    if (server->recv_callback)
+                    {
+                        server->recv_callback(p, size);
+                    }
                 }
                 break;
             }
@@ -198,17 +198,10 @@ static NetClientId connect_client_(NetServer* server,
             mem_copy(&client->address, address, sizeof(struct sockaddr_in));
             client->last_recvfrom_time_ms = time_get_ms();
             client->is_connected = true;
-
-            PacketInfo* pi =
-                mem_alloc(sizeof(PacketInfo) + sizeof(NetPacketVirtual) -
-                          sizeof(NetPacketHead));
-            pi->packet.head.type = NPT_VIRTUAL;
-            pi->packet.head.sender = i;
-            pi->size = sizeof(NetPacketVirtual);
-            ((NetPacketVirtual*)(&pi->packet))->virtual_type =
-                NVPT_CLIENT_CONNECTED;
-
-            queue_queue(server->recv_queue, pi);
+            if (server->connect_callback)
+            {
+                server->connect_callback(i);
+            }
             return i;
         }
     }
@@ -220,16 +213,10 @@ static void disconnect_client_(NetServer* server, NetClientId id)
     if (id < server->info.max_clients && server->clients[id].is_connected)
     {
         mem_set(&server->clients[id], 0, sizeof(Client));
-
-        PacketInfo* pi =
-            mem_alloc(sizeof(PacketInfo) + sizeof(NetPacketVirtual) -
-                      sizeof(NetPacketHead));
-        pi->packet.head.type = NPT_VIRTUAL;
-        pi->packet.head.sender = id;
-        pi->size = sizeof(NetPacketVirtual);
-        ((NetPacketVirtual*)(&pi->packet))->virtual_type =
-            NVPT_CLIENT_DISCONNECTED;
-        queue_queue(server->recv_queue, pi);
+        if (server->disconnect_callback)
+        {
+            server->disconnect_callback(id);
+        }
     }
 }
 
@@ -251,15 +238,6 @@ static void kick_delayed_clients_(NetServer* server)
             }
         }
         _last_check_time_ms = time_ms;
-    }
-}
-
-static void clear_recv_queue_(NetServer* server)
-{
-    void* recv_queue_item = 0;
-    while ((recv_queue_item = queue_dequeue(server->recv_queue)))
-    {
-        mem_free(recv_queue_item);
     }
 }
 
@@ -326,39 +304,32 @@ NetServer* net_server_create(unsigned short port, NetClientId max_clients,
                                               server->info.send_timeout_ms);
                 if (net_socket_bind_socket(server->socket, 0, port))
                 {
-                    server->recv_queue = queue_create_fifo();
-                    if (server->recv_queue)
+                    server->send_pqueue = pqueue_create_fifo();
+                    if (server->send_pqueue)
                     {
-                        server->send_pqueue = pqueue_create_fifo();
-                        if (server->send_pqueue)
+                        server->send_event = event_create();
+                        if (server->send_event)
                         {
-                            server->send_event = event_create();
-                            if (server->send_event)
+                            server->recv_thread =
+                                thread_create_with_args(recv_loop_, server);
+                            if (server->recv_thread)
                             {
-                                server->recv_thread =
-                                    thread_create_with_args(recv_loop_, server);
-                                if (server->recv_thread)
+                                server->send_thread =
+                                    thread_create_with_args(send_loop_, server);
+                                if (server->send_thread)
                                 {
-                                    server->send_thread =
-                                        thread_create_with_args(send_loop_,
-                                                                server);
-                                    if (server->send_thread)
-                                    {
-                                        mem_set(server->clients, 0,
-                                                sizeof(server->clients));
-                                        return server;
-                                    }
-                                    thread_destroy(server->send_thread, 0);
-                                    server->send_thread = 0;
+                                    mem_set(server->clients, 0,
+                                            sizeof(server->clients));
+                                    return server;
                                 }
-                                event_destroy(server->send_event);
-                                server->send_event = 0;
+                                thread_destroy(server->send_thread, 0);
+                                server->send_thread = 0;
                             }
-                            pqueue_dequeue(server->send_pqueue);
-                            server->send_pqueue = 0;
+                            event_destroy(server->send_event);
+                            server->send_event = 0;
                         }
-                        queue_destroy(server->recv_queue);
-                        server->recv_queue = 0;
+                        pqueue_dequeue(server->send_pqueue);
+                        server->send_pqueue = 0;
                     }
                 }
                 net_socket_destroy_socket(server->socket);
@@ -397,12 +368,6 @@ void net_server_destroy(NetServer* server)
         pqueue_destroy(server->send_pqueue);
         server->send_pqueue = 0;
     }
-    if (server->recv_queue)
-    {
-        clear_recv_queue_(server);
-        queue_destroy(server->recv_queue);
-        server->recv_queue = 0;
-    }
     if (server->socket)
     {
         net_socket_destroy_socket(server->socket);
@@ -418,19 +383,6 @@ void net_server_destroy(NetServer* server)
         mem_free(server);
         server = 0;
     }
-}
-
-int net_server_dequeue_packet(NetServer* server, NetPacket* packet)
-{
-    PacketInfo* pi = queue_dequeue(server->recv_queue);
-    if (pi)
-    {
-        mem_copy(packet, &pi->packet, pi->size);
-        int result = pi->size;
-        mem_free(pi);
-        return result;
-    }
-    return 0;
 }
 
 void net_server_send(NetServer* server, NetClientId id, NetPacket* packet,
@@ -462,4 +414,36 @@ const NetServerInfo* net_server_get_info(NetServer* server)
         return &server->info;
     }
     return 0;
+}
+
+bool net_server_set_recv_callback(NetServer* server,
+                                  void (*callback)(NetPacket* packet, int size))
+{
+    if (server && callback)
+    {
+        server->recv_callback = callback;
+        return true;
+    }
+    return false;
+}
+bool net_server_set_connect_callback(NetServer* server,
+                                     void (*callback)(NetClientId id))
+{
+    if (server && callback)
+    {
+        server->connect_callback = callback;
+        return true;
+    }
+    return false;
+}
+
+bool net_server_set_disconnect_callback(NetServer* server,
+                                        void (*callback)(NetClientId id))
+{
+    if (server && callback)
+    {
+        server->disconnect_callback = callback;
+        return true;
+    }
+    return false;
 }

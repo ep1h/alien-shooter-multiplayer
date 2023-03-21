@@ -3,6 +3,7 @@
 #include "utils/mem/mem.h"
 #include "net/client/client.h"
 #include "multiplayer_protocol.h"
+#include "utils/console/console.h"
 
 typedef struct MpClient
 {
@@ -11,6 +12,7 @@ typedef struct MpClient
     char server_ip[16];
     unsigned short server_port;
     char player_name[MP_MAX_NAME_LEN];
+    MpPlayer* players;
 } MpClient;
 
 typedef enum ConnectionSubstate
@@ -88,20 +90,56 @@ void handle_connecting_(MpClient* client)
     case CS_LOW_LEVEL_CONNECTED:
     {
         /* Send top level conenction request */
+        int name_len = strlen(client->player_name);
+        unsigned char
+            mpcr_buf[sizeof(MpPacketConnectionRequest) + MP_MAX_NAME_LEN + 1];
+        MpPacketConnectionRequest* mpcr = (MpPacketConnectionRequest*)mpcr_buf;
+        mpcr->head.type = MPT_CONNECTION_REQUEST;
+        mpcr->name_len = name_len;
+        strcpy(mpcr->name, client->player_name);
+        net_client_send(client->nc, mpcr,
+                        sizeof(MpPacketConnectionRequest) + name_len + 1, 1);
         cs = CS_TOP_LEVEL_CONNECTING;
-
-        client->state = MPS_CONNECTED; // TODO: Remove this line.
-        cs = CS_IDLE;
         break;
     }
-    case CS_TOP_LEVEL_CONNECTING: /* Wait for top level to be connected */
+    case CS_TOP_LEVEL_CONNECTING:
     {
-
+        /* Wait for top level to be connected */
+        char buf[1024];
+        NetPacket* np = (NetPacket*)buf;
+        for (int size = net_client_dequeue_packet(client->nc, np); size;
+             size = net_client_dequeue_packet(client->nc, np))
+        {
+            MpPacketConnectionResponse* mpcr =
+                (MpPacketConnectionResponse*)np->payload;
+            if (mpcr->head.type == MPT_CONNECTION_RESPONSE)
+            {
+                console_log("recv connection response. Map: %s\n",
+                            mpcr->server_info.map_name);
+                /* Store top level server info here (map name, etc...) */
+                const NetServerInfo* nsi =
+                    net_client_get_server_info(client->nc);
+                if (nsi)
+                {
+                    client->players =
+                        mem_alloc(sizeof(MpPlayer) * nsi->max_clients);
+                    if (client->players)
+                    {
+                        cs = CS_TOP_LEVEL_CONNECTED;
+                        break;
+                    }
+                    client->state = MPS_CONNECTION_FAILED;
+                    break;
+                }
+            }
+        }
         break;
     }
     case CS_TOP_LEVEL_CONNECTED:
     {
+        console_log("CS_TOP_LEVEL_CONNECTED\n");
         client->state = MPS_CONNECTED;
+        cs = CS_IDLE;
         break;
     }
     }
@@ -130,15 +168,18 @@ void handle_disconnected_(MpClient* client)
 MpClient* mp_client_create(void)
 {
     MpClient* client = mem_alloc(sizeof(MpClient));
-    mem_set(client, 0, sizeof(*client));
     if (client)
     {
-        client->nc = net_client_create();
-        if (client->nc)
+        mem_set(client, 0, sizeof(*client));
+        if (client)
         {
-            return client;
+            client->nc = net_client_create();
+            if (client->nc)
+            {
+                return client;
+            }
+            mem_free(client);
         }
-        mem_free(client);
     }
     return 0;
 }

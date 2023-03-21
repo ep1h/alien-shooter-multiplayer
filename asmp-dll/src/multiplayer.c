@@ -151,6 +151,18 @@ static int __thiscall _Game__tick_hook(Game* this)
     return ((Game__tick_t)FUNC_GAME_TICK)(ECX, EDX);
 }
 
+int __fastcall Game__wnd_proc_hook(Game* this, HWND hwnd, uint32_t msg,
+                                   uint32_t wparam, uint32_t lparam)
+{
+    if (msg == 0x001C) /* WM_ACTIVATEAPP */
+    {
+        /* Prevent game loop freething when game window loses focus */
+        wparam = 1;
+    }
+    return ((Game__wnd_proc_t)FUNC_GAME_WNDPROC)(ECX, EDX, hwnd, msg, wparam,
+                                                 lparam);
+}
+
 static void state_play_menu_handler_(void)
 {
     PlayMenu play_menu = {0};
@@ -237,10 +249,15 @@ static bool set_hooks_(void)
     load_menu_tramp_ = hook_set((void*)FUNC_LOAD_MENU, _load_menu_hook, 8);
     if (load_menu_tramp_)
     {
-        /* Set VMT hook to game tick function */
-        hook_set_vmt((void**)&game_get_game()->__vftable->tick,
-                     _Game__tick_hook);
-        return true;
+        if (hook_set_vmt((void**)&game_get_game()->__vftable->tick,
+                         _Game__tick_hook))
+        {
+            if (hook_set_vmt((void**)&game_get_game()->__vftable->wnd_proc,
+                             Game__wnd_proc_hook))
+            {
+                return true;
+            }
+        }
     }
     return false;
 }

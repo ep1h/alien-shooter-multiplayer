@@ -14,6 +14,12 @@ typedef struct RequestInfo
     NetTime recv_time_ms;
 } RequestInfo;
 
+typedef struct Player
+{
+    bool is_connected;
+    MpPlayer mp_player;
+} Player;
+
 typedef struct MpClient
 {
     NetClient* nc;
@@ -21,7 +27,7 @@ typedef struct MpClient
     char server_ip[16];
     unsigned short server_port;
     char player_name[MP_MAX_NAME_LEN];
-    MpPlayer* players;
+    Player* players;
     RequestInfo client_info_request;
 } MpClient;
 
@@ -131,8 +137,8 @@ void handle_connecting_(MpClient* client)
                     net_client_get_server_info(client->nc);
                 if (nsi)
                 {
-                    client->players =
-                        mem_alloc(sizeof(MpPlayer) * nsi->max_clients);
+                    client->players = mem_alloc(sizeof(client->players[0]) *
+                                                nsi->max_clients);
                     if (client->players)
                     {
                         cs = CS_TOP_LEVEL_CONNECTED;
@@ -193,15 +199,22 @@ void handle_connected_(MpClient* client)
                     net_client_get_server_info(client->nc);
                 if (nsi)
                 {
+                    for (unsigned int i = 0; i < nsi->max_clients; i++)
+                    {
+                        // TODO: The next code may be unsafe.
+                        client->players[i].is_connected = false;
+                    }
                     for (unsigned char i = 0; i < mppi->players_number; i++)
                     {
                         console_log("  from %s[%d]\n",
                                     mppi->palyers[i].mp_player.client_info.name,
                                     mppi->palyers[i].id);
-                        mem_copy(&client->players[mppi->palyers[i].id],
-                                 &mppi->palyers[i].mp_player,
-                                 sizeof(mppi->palyers[i].mp_player));
-                        true;
+                        mem_copy(
+                            &client->players[mppi->palyers[i].id].mp_player,
+                            &mppi->palyers[i].mp_player,
+                            sizeof(mppi->palyers[i].mp_player));
+                        client->players[mppi->palyers[i].id].is_connected =
+                            true;
                     }
                     break;
                 }

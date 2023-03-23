@@ -30,6 +30,32 @@ static void send_(NetClientId id, MpPacket* packet, int size,
     net_server_send(server.ns, id, np, size + sizeof(NetPacket), priority);
 }
 
+static void send_players_info_(NetClientId destination)
+{
+    const NetServerInfo* nsi = net_server_get_info(server.ns);
+    unsigned char buf[1024];
+    MpPacketPlayersInfo* mppi = (MpPacketPlayersInfo*)buf;
+    mppi->head.type = MPT_PLAYERS_INFO;
+    if (nsi)
+    {
+        unsigned char cur_idx = 0;
+        for (NetClientId i = 0; i < nsi->max_clients; i++)
+        {
+            if (server.players[i].is_online)
+            {
+                mppi->palyers[cur_idx].id = i;
+                mem_copy(&mppi->palyers[cur_idx].mp_player,
+                         &server.players[i].mp_player,
+                         sizeof(server.players[i].mp_player));
+                ++cur_idx;
+            }
+        }
+        mppi->players_number = cur_idx;
+        send_(destination, (MpPacket*)mppi,
+              sizeof(MpPacketPlayersInfo) + sizeof(MpPlayer) * cur_idx, 0);
+    }
+}
+
 void on_connect_(NetClientId id)
 {
     printf("mp connect %d\n", id);
@@ -70,33 +96,13 @@ void on_recv_(NetPacket* packet, int size)
                 mpp->name, mpp->name_len);
         printf("store name: %s len: %d\n", mpp->name, mpp->name_len);
         server.players[sender].is_online = true;
+        /* Notify other */
+        send_players_info_(NET_CLIENT_ID_ALL_BUT(sender));
         break;
     }
     case MPT_PLAYERS_INFO_REQUEST:
     {
-        char buf[1024];
-
-        MpPacketPlayersInfo* mppi = (MpPacketPlayersInfo*)buf;
-        mppi->head.type = MPT_PLAYERS_INFO;
-        const NetServerInfo* nsi = net_server_get_info(server.ns);
-        printf("max_clients: %d\n", nsi->max_clients);
-        unsigned char cur_idx = 0;
-        for (NetClientId i = 0; i < nsi->max_clients; i++)
-        {
-            if (server.players[i].is_online && i != sender)
-            {
-                mppi->palyers[cur_idx].id = i;
-                mem_copy(&mppi->palyers[cur_idx].mp_player,
-                         &server.players[i].mp_player,
-                         sizeof(server.players[i].mp_player));
-                ++cur_idx;
-                printf("add info about idx: %d %s\n", cur_idx,
-                       server.players[i].mp_player.client_info.name);
-            }
-        }
-        mppi->players_number = cur_idx;
-        send_(sender, (MpPacket*)mppi,
-              sizeof(MpPacketPlayersInfo) + sizeof(MpPlayer) * cur_idx, 0);
+        send_players_info_(sender);
         break;
     }
     default:

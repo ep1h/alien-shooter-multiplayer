@@ -4,6 +4,15 @@
 #include "net/client/client.h"
 #include "multiplayer_protocol.h"
 #include "utils/console/console.h"
+#include "utils/time/time.h"
+
+#define REQUEST_DELAY_MS 1000
+
+typedef struct RequestInfo
+{
+    NetTime send_time_ms;
+    NetTime recv_time_ms;
+} RequestInfo;
 
 typedef struct MpClient
 {
@@ -13,6 +22,7 @@ typedef struct MpClient
     unsigned short server_port;
     char player_name[MP_MAX_NAME_LEN];
     MpPlayer* players;
+    RequestInfo client_info_request;
 } MpClient;
 
 typedef enum ConnectionSubstate
@@ -147,7 +157,55 @@ void handle_connecting_(MpClient* client)
 
 void handle_connected_(MpClient* client)
 {
-    (void)client;
+    /* Request data */
+    NetTime time = (NetTime)time_get_ms();
+    if ((((time - client->client_info_request.recv_time_ms) > 10000) &&
+         ((time - client->client_info_request.send_time_ms) >
+          REQUEST_DELAY_MS)) ||
+        (client->client_info_request.send_time_ms == 0))
+    {
+        console_log("send MpPacketPlayersInfoRequest\n");
+        MpPacketPlayersInfoRequest mppir;
+        mppir.head.type = MPT_PLAYERS_INFO_REQUEST;
+        net_client_send(client->nc, &mppir, sizeof(mppir), 5);
+        client->client_info_request.send_time_ms = time;
+    }
+
+    /* Dequeue all received packets */
+    char buf[1024];
+    NetPacket* p = (NetPacket*)buf;
+    for (int size = net_client_dequeue_packet(client->nc, p); size > 0;
+         size = net_client_dequeue_packet(client->nc, p))
+    {
+        // NetClientId sender = p->head.sender;
+        if (p->head.type == NPT_DATA)
+        {
+            MpPacket* mp = (MpPacket*)p->payload;
+            switch (mp->head.type)
+            {
+            case MPT_PLAYERS_INFO:
+            {
+                console_log("MPT_PLAYERS_INFO\n");
+                client->client_info_request.recv_time_ms = time;
+                MpPacketPlayersInfo* mppi = (MpPacketPlayersInfo*)mp;
+                for (unsigned char i = 0; i < mppi->players_number; i++)
+                {
+                    console_log("  from %s[%d]\n",
+                                mppi->palyers[i].mp_player.client_info.name,
+                                mppi->palyers[i].id);
+                    mem_copy(&client->players[mppi->palyers[i].id],
+                             &mppi->palyers[i].mp_player,
+                             sizeof(mppi->palyers[i].mp_player));
+                }
+                break;
+            }
+            default:
+            {
+                break;
+            }
+            }
+        }
+    }
 }
 
 void handle_connection_failed_(MpClient* client)

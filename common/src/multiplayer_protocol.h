@@ -9,7 +9,7 @@ typedef struct MpServerInfo
 {
     unsigned char map_name_len;
     char map_name[];
-}MpServerInfo;
+} MpServerInfo;
 
 typedef struct MpClientInfo
 {
@@ -34,6 +34,12 @@ typedef struct MpPlayer
     MpActorInfo actor_info;
 } MpPlayer;
 
+typedef struct MpPlayerInfo
+{
+    unsigned short id;
+    MpPlayer mp_player;
+} MpPlayerInfo;
+
 typedef enum MpPacketType
 {
     MPT_EMPTY = 0,
@@ -41,6 +47,7 @@ typedef enum MpPacketType
     MPT_DISCONNECT,
     MPT_CONNECTION_REQUEST,
     MPT_CONNECTION_RESPONSE,
+    MPT_PLAYERS_INFO_REQUEST,
     MPT_PLAYERS_INFO,
 } MpPacketType;
 
@@ -73,5 +80,18 @@ typedef struct MpPacketConnectionResponse
     MpPacketHead head;
     MpServerInfo server_info;
 } MpPacketConnectionResponse;
+
+typedef struct MpPacketPlayersInfoRequest
+{
+    MpPacketHead head;
+} MpPacketPlayersInfoRequest;
+
+typedef struct MpPacketPlayersInfo
+{
+    MpPacketHead head;
+    unsigned char players_number;
+    MpPlayerInfo palyers[];
+} MpPacketPlayersInfo;
+
 
 #endif /* MULTIPLAYER_PROTOCOL */

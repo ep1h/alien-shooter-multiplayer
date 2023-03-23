@@ -24,6 +24,12 @@
 
 !/asmp-server/src
 
+!/asmp-exe-patcher/
+/asmp-exe-patcher/*
+!/asmp-exe-patcher/src
+!/asmp-exe-patcher/Makefile
+!/asmp-exe-patcher/README.md
+
 !/common/
 
 !/game/

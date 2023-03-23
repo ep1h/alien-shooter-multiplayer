@@ -188,16 +188,23 @@ void handle_connected_(MpClient* client)
                 console_log("MPT_PLAYERS_INFO\n");
                 client->client_info_request.recv_time_ms = time;
                 MpPacketPlayersInfo* mppi = (MpPacketPlayersInfo*)mp;
-                for (unsigned char i = 0; i < mppi->players_number; i++)
+
+                const NetServerInfo* nsi =
+                    net_client_get_server_info(client->nc);
+                if (nsi)
                 {
-                    console_log("  from %s[%d]\n",
-                                mppi->palyers[i].mp_player.client_info.name,
-                                mppi->palyers[i].id);
-                    mem_copy(&client->players[mppi->palyers[i].id],
-                             &mppi->palyers[i].mp_player,
-                             sizeof(mppi->palyers[i].mp_player));
+                    for (unsigned char i = 0; i < mppi->players_number; i++)
+                    {
+                        console_log("  from %s[%d]\n",
+                                    mppi->palyers[i].mp_player.client_info.name,
+                                    mppi->palyers[i].id);
+                        mem_copy(&client->players[mppi->palyers[i].id],
+                                 &mppi->palyers[i].mp_player,
+                                 sizeof(mppi->palyers[i].mp_player));
+                        true;
+                    }
+                    break;
                 }
-                break;
             }
             default:
             {

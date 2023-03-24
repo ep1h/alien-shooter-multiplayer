@@ -2,6 +2,7 @@
 #define MULTIPLAYER_CLIENT_H
 
 #include <stdbool.h>
+#include "multiplayer_protocol.h"
 
 typedef struct MpClient MpClient;
 
@@ -25,5 +26,9 @@ void mp_client_disconnect(MpClient* client);
 void mp_client_tick(MpClient* client);
 
 MpClientState mp_client_get_state(MpClient* client);
+
+int mp_client_get_max_players(MpClient* client);
+
+const MpPlayer* mp_client_get_player(MpClient* client, unsigned char id);
 
 #endif /* MULTIPLAYER_CLIENT_H */

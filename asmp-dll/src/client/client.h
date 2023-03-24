@@ -36,4 +36,6 @@ void mp_client_update_local_actor_info(MpClient* client,
 
 const char* mp_client_get_map_name(MpClient* client);
 
+int mp_client_get_local_player_id(MpClient* client);
+
 #endif /* MULTIPLAYER_CLIENT_H */

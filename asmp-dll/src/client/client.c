@@ -426,3 +426,11 @@ const char* mp_client_get_map_name(MpClient* client)
     }
     return 0;
 }
+int mp_client_get_local_player_id(MpClient* client)
+{
+    if (client)
+    {
+        return net_client_get_id(client->nc);
+    }
+    return -1;
+}

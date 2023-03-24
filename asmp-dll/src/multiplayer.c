@@ -4,6 +4,8 @@
 #include "utils/hook/hook.h"
 #include "game/addresses.h"
 #include "game/game.h"
+#include "game/types/Army.h"
+#include "game/types/entities/EntPlayer.h"
 #include "utils/console/console.h"
 #include "gameutils.h"
 #include "game/types/entities/EntText.h"
@@ -47,6 +49,7 @@ static load_menu_t load_menu_tramp_ = 0;
 static char mainmenu_file_[] = "maps\\asmp_mainmenu.men";
 static MpClient* client_;
 
+static EntPlayer* get_local_layer_(void);
 static bool read_play_menu_(PlayMenu* out_play_menu);
 static bool parse_address_(const char* str, char* ip, uint16_t* port);
 static int __stdcall _load_menu_hook(const char** menu_file);
@@ -54,6 +57,29 @@ static int __thiscall _Game__tick_hook(Game* this);
 static void state_play_menu_handler_(void);
 static void state_connected_handler_(void);
 static bool set_hooks_(void);
+
+static EntPlayer* get_local_layer_(void)
+{
+    Game* game = game_get_game();
+    int army_idx = game_get_game()->mb_flagman_army;
+    if (army_idx < 4)
+    {
+        Army* army = game->army[army_idx];
+        if (army)
+        {
+            EntPlayer* player = army->player;
+            if (player)
+            {
+                /* If player torso is inited */
+                if (player->ent_unit.ent_object.entity.child)
+                {
+                    return player;
+                }
+            }
+        }
+    }
+    return 0;
+}
 
 static bool read_play_menu_(PlayMenu* out_play_menu)
 {
@@ -244,6 +270,20 @@ static void state_play_menu_handler_(void)
 
 static void state_connected_handler_(void)
 {
+    EntPlayer* local_player = get_local_layer_();
+    if (local_player)
+    {
+        Entity* local_player_entity = &local_player->ent_unit.ent_object.entity;
+        MpActorInfo mai;
+        mai.x = local_player_entity->x;
+        mai.y = local_player_entity->y;
+        mai.z = local_player_entity->z;
+        mai.velocity = local_player_entity->velocity;
+        mai.health = local_player_entity->health;
+        mai.direction_legs = local_player_entity->direction;
+        mai.direction_torso = local_player_entity->child->direction;
+        mp_client_update_local_actor_info(client_, &mai);
+    }
 }
 
 static bool set_hooks_(void)

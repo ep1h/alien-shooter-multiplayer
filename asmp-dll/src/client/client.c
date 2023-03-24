@@ -31,6 +31,7 @@ typedef struct MpClient
     Player* players;
     RequestInfo client_info_request;
     NetTime actor_info_sent_time_ms;
+    char map_name[128];
 } MpClient;
 
 typedef enum ConnectionSubstate
@@ -132,8 +133,9 @@ void handle_connecting_(MpClient* client)
                 (MpPacketConnectionResponse*)np->payload;
             if (mpcr->head.type == MPT_CONNECTION_RESPONSE)
             {
-                console_log("recv connection response. Map: %s\n",
-                            mpcr->server_info.map_name);
+                /* Store map name */
+                strncpy(client->map_name, mpcr->server_info.map_name,
+                        mpcr->server_info.map_name_len);
                 /* Store top level server info here (map name, etc...) */
                 const NetServerInfo* nsi =
                     net_client_get_server_info(client->nc);
@@ -414,4 +416,13 @@ void mp_client_update_local_actor_info(MpClient* client,
             }
         }
     }
+}
+
+const char* mp_client_get_map_name(MpClient* client)
+{
+    if (client)
+    {
+        return client->map_name;
+    }
+    return 0;
 }

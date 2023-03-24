@@ -6,7 +6,8 @@
 #include "utils/console/console.h"
 #include "utils/time/time.h"
 
-#define REQUEST_DELAY_MS 1000
+#define REQUEST_DELAY_MS          1000
+#define ACTOR_INFO_UPDATE_RATE_MS 60
 
 typedef struct RequestInfo
 {
@@ -29,6 +30,7 @@ typedef struct MpClient
     char player_name[MP_MAX_NAME_LEN];
     Player* players;
     RequestInfo client_info_request;
+    NetTime actor_info_sent_time_ms;
 } MpClient;
 
 typedef enum ConnectionSubstate
@@ -175,6 +177,19 @@ void handle_connected_(MpClient* client)
         mppir.head.type = MPT_PLAYERS_INFO_REQUEST;
         net_client_send(client->nc, &mppir, sizeof(mppir), 5);
         client->client_info_request.send_time_ms = time;
+        client->actor_info_sent_time_ms = time;
+    }
+    /* Send required packets */
+    if ((time - client->actor_info_sent_time_ms) > ACTOR_INFO_UPDATE_RATE_MS)
+    {
+        client->actor_info_sent_time_ms = time;
+        MpPacketActorInfo mpai;
+        mpai.head.type = MPT_ACTOR_INFO;
+        mem_copy(&mpai.mp_actor_info,
+                 &client->players[net_client_get_id(client->nc)]
+                      .mp_player.actor_info,
+                 sizeof(mpai.mp_actor_info));
+        net_client_send(client->nc, &mpai, sizeof(mpai), 0);
     }
 
     /* Dequeue all received packets */

@@ -101,6 +101,14 @@ void on_recv_(NetCPacket* packet, int size)
         send_players_info_(sender);
         break;
     }
+    case MPT_ACTOR_INFO:
+    {
+        /* Store actor info */
+        MpPacketActorInfo* mpp = (MpPacketActorInfo*)(mp_packet);
+        mem_copy(&server.players[sender].mp_player.actor_info,
+                 &mpp->mp_actor_info, sizeof(mpp->mp_actor_info));
+        break;
+    }
     default:
     {
         break;

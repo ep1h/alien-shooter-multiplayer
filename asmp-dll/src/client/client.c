@@ -383,3 +383,20 @@ const MpPlayer* mp_client_get_player(MpClient* client, unsigned char id)
     }
     return 0;
 }
+
+void mp_client_update_local_actor_info(MpClient* client,
+                                       const MpActorInfo* local_actor_info)
+{
+    if (client)
+    {
+        NetClientId local_player_id = net_client_get_id(client->nc);
+        if (local_player_id != NET_CLIENT_ID_INVALID)
+        {
+            if (client->players)
+            {
+                mem_copy(&client->players[local_player_id].mp_player.actor_info,
+                         local_actor_info, sizeof(*local_actor_info));
+            }
+        }
+    }
+}

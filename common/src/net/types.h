@@ -5,6 +5,8 @@ typedef unsigned char NetClientId;
 typedef unsigned char NetPriority;
 typedef unsigned long NetTime;
 typedef unsigned short NetPort;
+typedef unsigned char NetByte;
+typedef int NetSize;
 
 #define NET_CLIENT_ID_INVALID      ((NetClientId)0b11111110)
 #define NET_CLIENT_ID_ALL          ((NetClientId)0b11111111)
@@ -15,11 +17,12 @@ typedef unsigned short NetPort;
 typedef enum NetPacketType
 {
     NPT_EMPTY = 0,
-    NPT_CONNECTION_REQUEST,
-    NPT_CONNECTION_RESPONSE,
-    NPT_SYNC,
-    NPT_DISCONNECT,
-    NPT_DATA,
+    NPT_C_CONNECTION_REQUEST,
+    NPT_S_CONNECTION_RESPONSE,
+    NPT_C_SYNC,
+    NPT_C_DISCONNECT,
+    NPT_S_DATA,  /* Data from server to client */
+    NPT_C_DATA,  /* Data from client to server */
     NPT_VIRTUAL, /* Events from server to server */
 } NetPacketType;
 
@@ -33,35 +36,51 @@ typedef struct NetServerInfo
 typedef struct NetPacketHead
 {
     NetPacketType type;
-    NetClientId sender;
 } NetPacketHead;
 
-typedef struct NetPacket
+typedef struct NetSPacketHead
 {
-    NetPacketHead head;
-    unsigned char payload[];
-} NetPacket;
+    NetPacketHead net_head;
+} NetSPacketHead;
 
-typedef struct NetPacketConnectionRequest
+typedef struct NetCPacketHead
 {
-    NetPacketHead head;
-} NetPacketConnectionRequest;
+    NetPacketHead net_head;
+    NetClientId sender;
+} NetCPacketHead;
 
-typedef struct NetPacketConnectionResponse
+typedef struct NetSPacket
 {
-    NetPacketHead head;
+    NetSPacketHead shead;
+    NetByte payload[];
+} NetSPacket;
+
+typedef struct NetCPacket
+{
+    NetCPacketHead chead;
+    NetByte payload[];
+} NetCPacket;
+
+typedef struct NetCPacketConnectionRequest
+{
+    NetCPacketHead head;
+} NetCPacketConnectionRequest;
+
+typedef struct NetSPacketConnectionResponse
+{
+    NetSPacketHead head;
     NetServerInfo server_info;
     NetClientId assigned_id;
-} NetPacketConnectionResponse;
+} NetSPacketConnectionResponse;
 
-typedef struct NetPacketDisconnect
+typedef struct NetCPacketDisconnect
 {
-    NetPacketHead head;
-} NetPacketDisconnect;
+    NetCPacketHead head;
+} NetCPacketDisconnect;
 
-typedef struct NetPacketSync
+typedef struct NetCPacketSync
 {
-    NetPacketHead head;
-} NetPacketSync;
+    NetCPacketHead head;
+} NetCPacketSync;
 
 #endif /* MULTIPLAYER_NET_TYPES_H */

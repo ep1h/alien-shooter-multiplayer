@@ -27,7 +27,7 @@ void net_client_disconnect(NetClient* client);
 
 void net_client_tick(NetClient* client);
 
-int net_client_dequeue_packet(NetClient* client, NetPacket* packet);
+int net_client_dequeue_packet(NetClient* client, NetSPacket* packet);
 void net_client_send(NetClient* client, const void* buf, int size,
                      NetPriority priority);
 

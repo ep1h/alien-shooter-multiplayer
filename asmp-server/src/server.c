@@ -23,11 +23,7 @@ static MpServer server = {0};
 static void send_(NetClientId id, MpPacket* packet, int size,
                   NetPriority priority)
 {
-    char buf[1024];
-    NetSPacket* np = (NetSPacket*)buf;
-    np->shead.net_head.type = NPT_S_DATA;
-    mem_copy(np->payload, packet, size);
-    net_server_send(server.ns, id, np, size + sizeof(NetSPacket), priority);
+    net_server_send(server.ns, id, packet, size, priority);
 }
 
 static void send_players_info_(NetClientId destination)
@@ -58,7 +54,7 @@ static void send_players_info_(NetClientId destination)
 
 void on_connect_(NetClientId id)
 {
-    printf("mp connect %d\n", id);
+    printf("!!mp connect %d\n", id);
 }
 
 void on_disconnect_(NetClientId id)

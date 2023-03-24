@@ -241,6 +241,7 @@ static void state_play_menu_handler_(void)
             substate = SPMS_CONNECTED;
             state_ = STATE_CONNECTED;
             play_menu.status->entity.entity.health = substate;
+            Game__load_map(game_get_game(), 0, mp_client_get_map_name(client_));
         }
         else if (mcs == MPS_CONNECTION_FAILED)
         {

@@ -351,3 +351,35 @@ MpClientState mp_client_get_state(MpClient* client)
     }
     return MPS_UNINITED;
 }
+
+int mp_client_get_max_players(MpClient* client)
+{
+    if (client)
+    {
+        const NetServerInfo* nsi = net_client_get_server_info(client->nc);
+        if (nsi)
+        {
+            return nsi->max_clients;
+        }
+    }
+    return 0;
+}
+
+const MpPlayer* mp_client_get_player(MpClient* client, unsigned char id)
+{
+    if (client)
+    {
+        const NetServerInfo* nsi = net_client_get_server_info(client->nc);
+        if (nsi)
+        {
+            if (id < nsi->max_clients)
+            {
+                if (client->players[id].is_connected)
+                {
+                    return &client->players[id].mp_player;
+                }
+            }
+        }
+    }
+    return 0;
+}

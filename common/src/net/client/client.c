@@ -9,11 +9,17 @@
 #define NET_CLIENT_DEFAULT_RECV_TIMEOUT_MS 5000
 #define NET_CLIENT_DEFAULT_SEND_TIMEOUT_MS 5000
 
-typedef struct PacketInfo
+typedef struct CPacketInfo
 {
     int size;
-    NetPacket packet;
-} PacketInfo;
+    NetCPacket packet;
+} CPacketInfo;
+
+typedef struct SPacketInfo
+{
+    int size;
+    NetSPacket packet;
+} SPacketInfo;
 
 typedef struct NetClient
 {
@@ -50,11 +56,11 @@ static void state_connecting_handler_(NetClient* client)
     struct sockaddr_in addr;
     unsigned char
         buf[NET_SOCKET_MAX_MSG_SIZE]; // TODO: Use
-                                      // sizeof(NetPacketConnectionResponse)
-    NetPacketConnectionResponse* pcresp = (NetPacketConnectionResponse*)buf;
+                                      // sizeof(NetSPacketConnectionResponse)
+    NetSPacketConnectionResponse* pcresp = (NetSPacketConnectionResponse*)buf;
     int size = net_socket_recvfrom(client->socket, &addr, buf);
     // TODO: Check sender address.
-    if (size > 0 && pcresp->head.type == NPT_CONNECTION_RESPONSE)
+    if (size > 0 && pcresp->head.net_head.type == NPT_S_CONNECTION_RESPONSE)
     {
         if (pcresp->assigned_id != NET_CLIENT_ID_INVALID)
         {
@@ -91,7 +97,7 @@ static void state_connected_handler_(NetClient* client)
 {
     /* Process data to be send */
     NetTime cur_time = time_get_ms();
-    PacketInfo* pi;
+    CPacketInfo* pi;
     while ((pi = pqueue_dequeue(client->send_pqueue)))
     {
         net_socket_sendto(client->socket, &client->server_address, &pi->packet,
@@ -102,15 +108,15 @@ static void state_connected_handler_(NetClient* client)
     /* Send SYNC if required */
     if ((cur_time - client->last_send_time_ms) >= client->sync_period_ms)
     {
-        NetPacketSync nps;
-        nps.head.type = NPT_SYNC;
+        NetCPacketSync nps;
+        nps.head.net_head.type = NPT_C_SYNC;
         nps.head.sender = client->id;
         net_socket_sendto(client->socket, &client->server_address, &nps,
                           sizeof(nps));
         client->last_send_time_ms = cur_time;
     }
 
-    /* Process receiced data */
+    /* Process received data */
     struct sockaddr_in sender;
     char buf[NET_SOCKET_MAX_MSG_SIZE];
     int size;
@@ -121,7 +127,7 @@ static void state_connected_handler_(NetClient* client)
         //  {
         //      continue;
         //  }
-        PacketInfo* pi = mem_alloc(sizeof(PacketInfo) + size);
+        SPacketInfo* pi = mem_alloc(sizeof(SPacketInfo) + size);
         pi->size = size;
         mem_copy(&pi->packet, buf, size);
         queue_queue(client->recv_queue, pi);
@@ -221,11 +227,11 @@ bool net_client_connection_request(NetClient* client, const char* ip,
         client->server_address.sin_port = htons(port);
         client->server_address.sin_addr.S_un.S_addr = inet_addr(ip);
 
-        /* Build NetPacketConnectionRequest */
-        NetPacketConnectionRequest pcreq;
+        /* Build NetCPacketConnectionRequest */
+        NetCPacketConnectionRequest pcreq;
         pcreq.head.sender = NET_CLIENT_ID_INVALID;
-        pcreq.head.type = NPT_CONNECTION_REQUEST;
-        /* Send NetPacketConnectionRequest */
+        pcreq.head.net_head.type = NPT_C_CONNECTION_REQUEST;
+        /* Send NetCPacketConnectionRequest */
         if (net_socket_sendto(client->socket, &client->server_address, &pcreq,
                               sizeof(pcreq)) == sizeof(pcreq))
         {
@@ -242,11 +248,11 @@ void net_client_disconnect(NetClient* client)
     if (client &&
         (client->state == NCS_CONNECTED || client->state == NCS_CONNECTING))
     {
-        /* Build NetPacketDisconnect */
-        NetPacketDisconnect pd;
+        /* Build NetCPacketDisconnect */
+        NetCPacketDisconnect pd;
         pd.head.sender = client->id;
-        pd.head.type = NPT_DISCONNECT;
-        /* Send NetPacketConnectionRequest */
+        pd.head.net_head.type = NPT_C_DISCONNECT;
+        /* Send NetCPacketConnectionRequest */
         net_socket_sendto(client->socket, &client->server_address, &pd,
                           sizeof(pd));
         client->state = NCS_DISCONNECTION;
@@ -297,11 +303,11 @@ void net_client_tick(NetClient* client)
     }
 }
 
-int net_client_dequeue_packet(NetClient* client, NetPacket* packet)
+int net_client_dequeue_packet(NetClient* client, NetSPacket* packet)
 {
     if (client && client->recv_queue)
     {
-        PacketInfo* pi = queue_dequeue(client->recv_queue);
+        SPacketInfo* pi = queue_dequeue(client->recv_queue);
         if (pi)
         {
             mem_copy(packet, &pi->packet, pi->size);
@@ -318,11 +324,11 @@ void net_client_send(NetClient* client, const void* buf, int size,
 {
     if (client && client->state == NCS_CONNECTED && client->send_pqueue)
     {
-        PacketInfo* pi = mem_alloc(sizeof(PacketInfo) + size);
-        pi->packet.head.sender = client->id;
-        pi->packet.head.type = NPT_DATA;
+        CPacketInfo* pi = mem_alloc(sizeof(CPacketInfo) + size);
+        pi->packet.chead.sender = client->id;
+        pi->packet.chead.net_head.type = NPT_C_DATA;
         mem_copy(&pi->packet.payload, buf, size);
-        pi->size = size + sizeof(NetPacket);
+        pi->size = size + sizeof(NetCPacket);
         pqueue_queue(client->send_pqueue, pi, priority);
     }
 }

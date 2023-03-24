@@ -32,21 +32,27 @@ typedef struct NetServer
     LoopStatus recv_loop_status;
     LoopStatus send_loop_status;
     NetServerInfo info;
-    void (*recv_callback)(NetPacket* packet, int size);
+    void (*recv_callback)(NetCPacket* packet, int size);
     void (*connect_callback)(NetClientId id);
     void (*disconnect_callback)(NetClientId id);
 } NetServer;
 
-typedef struct PacketInfo
+typedef struct CPacketInfo
 {
     int size;
-    NetPacket packet;
-} PacketInfo;
+    NetCPacket packet;
+} CPacketInfo;
+
+typedef struct SPacketInfo
+{
+    int size;
+    NetSPacket packet;
+} SPacketInfo;
 
 typedef struct SendPacketInfo
 {
     NetClientId destination;
-    PacketInfo pi;
+    SPacketInfo pi;
 } SendPacketInfo;
 
 static void recv_loop_(NetServer* server);
@@ -70,19 +76,19 @@ static void recv_loop_(NetServer* server)
     while (server->recv_loop_status == LS_RUNNING)
     {
         size = net_socket_recvfrom(server->socket, &sender, buf);
-        if (size >= (int)sizeof(NetPacket))
+        if (size >= (int)sizeof(NetCPacket))
         {
-            NetPacket* p = (NetPacket*)buf;
-            switch (p->head.type)
+            NetCPacket* p = (NetCPacket*)buf;
+            switch (p->chead.net_head.type)
             {
-            case NPT_CONNECTION_REQUEST:
+            case NPT_C_CONNECTION_REQUEST:
             {
                 // TODO: Move this to another thread to prevent blocking recv
                 //       loop by connection logic.
 
-                /* Build NetPacketConnectionResponse*/
-                NetPacketConnectionResponse pcresp;
-                pcresp.head.type = NPT_CONNECTION_RESPONSE;
+                /* Build NetSPacketConnectionResponse*/
+                NetSPacketConnectionResponse pcresp;
+                pcresp.head.net_head.type = NPT_S_CONNECTION_RESPONSE;
                 pcresp.server_info.max_clients = server->info.max_clients;
                 pcresp.assigned_id = connect_client_(server, &sender);
                 pcresp.server_info.max_clients = server->info.max_clients;
@@ -97,25 +103,25 @@ static void recv_loop_(NetServer* server)
 
                 break;
             }
-            case NPT_SYNC:
+            case NPT_C_SYNC:
             {
-                if (net_server_is_client_connected(server, p->head.sender))
+                if (net_server_is_client_connected(server, p->chead.sender))
                 {
-                    server->clients[p->head.sender].last_recvfrom_time_ms =
+                    server->clients[p->chead.sender].last_recvfrom_time_ms =
                         time_get_ms();
                 }
                 break;
             }
-            case NPT_DISCONNECT:
+            case NPT_C_DISCONNECT:
             {
-                disconnect_client_(server, p->head.sender);
+                disconnect_client_(server, p->chead.sender);
                 break;
             }
-            case NPT_DATA:
+            case NPT_C_DATA:
             {
-                if (net_server_is_client_connected(server, p->head.sender))
+                if (net_server_is_client_connected(server, p->chead.sender))
                 {
-                    server->clients[p->head.sender].last_recvfrom_time_ms =
+                    server->clients[p->chead.sender].last_recvfrom_time_ms =
                         time_get_ms();
                     if (server->recv_callback)
                     {
@@ -385,7 +391,7 @@ void net_server_destroy(NetServer* server)
     }
 }
 
-void net_server_send(NetServer* server, NetClientId id, NetPacket* packet,
+void net_server_send(NetServer* server, NetClientId id, NetSPacket* packet,
                      int size, NetPriority priority)
 {
     if ((id & ~NET_CLIENT_ID_ALL_BUT_FLAG) >= server->info.max_clients)
@@ -393,7 +399,7 @@ void net_server_send(NetServer* server, NetClientId id, NetPacket* packet,
         return;
     }
     SendPacketInfo* spi =
-        mem_alloc(sizeof(SendPacketInfo) + size - sizeof(NetPacket));
+        mem_alloc(sizeof(SendPacketInfo) + size - sizeof(NetSPacket));
     mem_copy(&spi->pi.packet, packet, size);
     spi->pi.size = size;
     spi->destination = id;
@@ -417,7 +423,8 @@ const NetServerInfo* net_server_get_info(NetServer* server)
 }
 
 bool net_server_set_recv_callback(NetServer* server,
-                                  void (*callback)(NetPacket* packet, int size))
+                                  void (*callback)(NetCPacket* packet,
+                                                   int size))
 {
     if (server && callback)
     {

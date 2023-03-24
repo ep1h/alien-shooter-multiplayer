@@ -24,10 +24,10 @@ static void send_(NetClientId id, MpPacket* packet, int size,
                   NetPriority priority)
 {
     char buf[1024];
-    NetPacket* np = (NetPacket*)buf;
-    np->head.type = NPT_DATA;
+    NetSPacket* np = (NetSPacket*)buf;
+    np->shead.net_head.type = NPT_S_DATA;
     mem_copy(np->payload, packet, size);
-    net_server_send(server.ns, id, np, size + sizeof(NetPacket), priority);
+    net_server_send(server.ns, id, np, size + sizeof(NetSPacket), priority);
 }
 
 static void send_players_info_(NetClientId destination)
@@ -67,14 +67,14 @@ void on_disconnect_(NetClientId id)
     mem_set(&server.players[id], 0, sizeof(server.players[id]));
 }
 
-void on_recv_(NetPacket* packet, int size)
+void on_recv_(NetCPacket* packet, int size)
 {
-    if (size < (int)sizeof(NetPacket))
+    if (size < (int)sizeof(NetCPacket))
     {
         return;
     }
     MpPacket* mp_packet = (MpPacket*)packet->payload;
-    NetClientId sender = packet->head.sender;
+    NetClientId sender = packet->chead.sender;
     switch (mp_packet->head.type)
     {
     case MPT_CONNECTION_REQUEST:
@@ -92,7 +92,7 @@ void on_recv_(NetPacket* packet, int size)
               sizeof(MpPacketConnectionResponse) + map_name_size, 1);
         mem_set(&server.players[sender], 0, sizeof(server.players[sender]));
         /* Store player name */
-        strncpy(server.players[packet->head.sender].mp_player.client_info.name,
+        strncpy(server.players[packet->chead.sender].mp_player.client_info.name,
                 mpp->name, mpp->name_len);
         printf("store name: %s len: %d\n", mpp->name, mpp->name_len);
         server.players[sender].is_online = true;

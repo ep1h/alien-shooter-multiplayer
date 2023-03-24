@@ -122,7 +122,7 @@ void handle_connecting_(MpClient* client)
     {
         /* Wait for top level to be connected */
         char buf[1024];
-        NetPacket* np = (NetPacket*)buf;
+        NetSPacket* np = (NetSPacket*)buf;
         for (int size = net_client_dequeue_packet(client->nc, np); size;
              size = net_client_dequeue_packet(client->nc, np))
         {
@@ -179,12 +179,12 @@ void handle_connected_(MpClient* client)
 
     /* Dequeue all received packets */
     char buf[1024];
-    NetPacket* p = (NetPacket*)buf;
+    NetSPacket* p = (NetSPacket*)buf;
     for (int size = net_client_dequeue_packet(client->nc, p); size > 0;
          size = net_client_dequeue_packet(client->nc, p))
     {
         // NetClientId sender = p->head.sender;
-        if (p->head.type == NPT_DATA)
+        if (p->shead.net_head.type == NPT_S_DATA)
         {
             MpPacket* mp = (MpPacket*)p->payload;
             switch (mp->head.type)

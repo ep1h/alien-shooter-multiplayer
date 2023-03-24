@@ -56,7 +56,6 @@ ProcessConnectingText()
   else if( hp==SPMS_CONNECTED )
   {
     MenuRelease();
-    Load("maps\\survive_01.map");
   }
 }
 

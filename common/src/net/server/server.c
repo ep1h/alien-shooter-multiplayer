@@ -391,7 +391,7 @@ void net_server_destroy(NetServer* server)
     }
 }
 
-void net_server_send(NetServer* server, NetClientId id, NetSPacket* packet,
+void net_server_send(NetServer* server, NetClientId id, const void* buf,
                      int size, NetPriority priority)
 {
     if ((id & ~NET_CLIENT_ID_ALL_BUT_FLAG) >= server->info.max_clients)
@@ -399,8 +399,9 @@ void net_server_send(NetServer* server, NetClientId id, NetSPacket* packet,
         return;
     }
     SendPacketInfo* spi =
-        mem_alloc(sizeof(SendPacketInfo) + size - sizeof(NetSPacket));
-    mem_copy(&spi->pi.packet, packet, size);
+        mem_alloc(sizeof(SendPacketInfo) + sizeof(NetSPacket) + size);
+    spi->pi.packet.shead.net_head.type = NPT_S_DATA;
+    mem_copy(&spi->pi.packet.payload, buf, size);
     spi->pi.size = size;
     spi->destination = id;
     pqueue_queue(server->send_pqueue, spi, priority);

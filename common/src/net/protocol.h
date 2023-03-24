@@ -1,5 +1,5 @@
-#ifndef NET_TYPES_H
-#define NET_TYPES_H
+#ifndef NET_PROTOCOL_H
+#define NET_PROTOCOL_H
 
 typedef unsigned char NetClientId;
 typedef unsigned char NetPriority;
@@ -83,4 +83,4 @@ typedef struct NetCPacketSync
     NetCPacketHead head;
 } NetCPacketSync;
 
-#endif /* MULTIPLAYER_NET_TYPES_H */
+#endif /* NET_PROTOCOL_H */

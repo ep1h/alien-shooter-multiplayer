@@ -2,7 +2,7 @@
 #define NET_SERVER_SERVER_H
 
 #include <stdbool.h>
-#include "../types.h"
+#include "../protocol.h"
 
 typedef struct NetServer NetServer;
 

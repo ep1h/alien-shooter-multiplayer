@@ -34,4 +34,6 @@ const MpPlayer* mp_client_get_player(MpClient* client, unsigned char id);
 void mp_client_update_local_actor_info(MpClient* client,
                                        const MpActorInfo* local_actor_info);
 
+const char* mp_client_get_map_name(MpClient* client);
+
 #endif /* MULTIPLAYER_CLIENT_H */

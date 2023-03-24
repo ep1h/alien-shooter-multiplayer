@@ -213,6 +213,8 @@ static void state_play_menu_handler_(void)
         if (mcs == MPS_CONNECTED)
         {
             substate = SPMS_CONNECTED;
+            state_ = STATE_CONNECTED;
+            play_menu.status->entity.entity.health = substate;
         }
         else if (mcs == MPS_CONNECTION_FAILED)
         {
@@ -226,7 +228,7 @@ static void state_play_menu_handler_(void)
         Entity__set_anim(play_menu.connect_button, 0, ANI_STAND);
         break;
     }
-    case SPMS_CONNECTED:
+    case SPMS_CONNECTED: // TODO: Remove this substate.
     {
         state_ = STATE_CONNECTED;
         break;

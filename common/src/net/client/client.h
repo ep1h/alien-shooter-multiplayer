@@ -1,7 +1,7 @@
 #ifndef NET_CLIENT
 #define NET_CLIENT
 
-#include "../types.h"
+#include "../protocol.h"
 
 #include <stdbool.h>
 

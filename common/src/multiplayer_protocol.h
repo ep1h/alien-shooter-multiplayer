@@ -49,6 +49,7 @@ typedef enum MpPacketType
     MPT_CONNECTION_RESPONSE,
     MPT_PLAYERS_INFO_REQUEST,
     MPT_PLAYERS_INFO,
+    MPT_ACTOR_INFO,
 } MpPacketType;
 
 typedef struct MpPacketHead
@@ -93,5 +94,10 @@ typedef struct MpPacketPlayersInfo
     MpPlayerInfo palyers[];
 } MpPacketPlayersInfo;
 
+typedef struct MpPacketActorInfo
+{
+    MpPacketHead head;
+    MpActorInfo mp_actor_info;
+} MpPacketActorInfo;
 
 #endif /* MULTIPLAYER_PROTOCOL */

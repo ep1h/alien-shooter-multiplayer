@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 
     while (1)
     {
-        Sleep(10000);
+        mp_server_tick();
     }
 
     mp_server_destroy();

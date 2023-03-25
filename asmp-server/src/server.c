@@ -4,6 +4,9 @@
 #include "utils/mem/mem.h"
 #include "net/server/server.h"
 #include "multiplayer_protocol.h"
+#include "utils/time/time.h"
+
+#define ACTORS_INFO_UPDATE_RATE_MS 60
 
 typedef struct Player
 {
@@ -16,7 +19,46 @@ typedef struct MpServer
     NetServer* ns;
     char map_name[255];
     Player* players;
+    NetTime prev_actors_info_updated_time_ms;
 } MpServer;
+
+static void send_actors_info_(MpServer* server);
+
+static void send_actors_info_(MpServer* server)
+{
+    for (int i = 0; i < net_server_get_info(server->ns)->max_clients; i++)
+    {
+        if (!server->players[i].is_online)
+        {
+            continue;
+        }
+        NetByte buf[1024] = {0};
+        MpPacketActorsInfo* p = (MpPacketActorsInfo*)buf;
+        p->head.type = MPT_ACTORS_INFO;
+
+        /* Build packet for 'i' player */
+        for (int j = 0; j < net_server_get_info(server->ns)->max_clients; j++)
+        {
+            if (server->players[j].is_online && i != j)
+            {
+                // printf("build packed for %d: insert info about %d\n", i, j);
+                MpInfoWrapper* dst_iw = (MpInfoWrapper*)((
+                    ((NetByte*)p->info_wrapper) +
+                    p->actors_number *
+                        (sizeof(MpInfoWrapper) + sizeof(MpActorInfo))));
+                dst_iw->id = j;
+                mem_copy(&dst_iw->payload,
+                         &server->players[j].mp_player.actor_info,
+                         sizeof(server->players[j].mp_player.actor_info));
+                p->actors_number++;
+            }
+        }
+        int size =
+            sizeof(MpPacketActorsInfo) +
+            (sizeof(MpInfoWrapper) + sizeof(MpActorInfo)) * p->actors_number;
+        net_server_send(server->ns, i, p, size, 0);
+    }
+}
 
 static void send_players_info_(MpServer* server, NetClientId destination)
 {
@@ -113,6 +155,7 @@ MpServer* mp_server_create(unsigned short port, int max_clients)
                 mem_alloc(sizeof(server->players[0]) * max_clients);
             if (server->players)
             {
+                server->prev_actors_info_updated_time_ms = time_get_ms();
                 return server;
             }
             net_server_destroy(server->ns);
@@ -146,5 +189,12 @@ void mp_server_tick(MpServer* server)
     while ((size = net_server_dequeue_packet(server->ns, (NetCPacket*)buf)))
     {
         on_recv_(server, (NetCPacket*)buf, size);
+    }
+    NetTime time = time_get_ms();
+    if ((time - server->prev_actors_info_updated_time_ms) >=
+        ACTORS_INFO_UPDATE_RATE_MS)
+    {
+        send_actors_info_(server);
+        server->prev_actors_info_updated_time_ms = time;
     }
 }

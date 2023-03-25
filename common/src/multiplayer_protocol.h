@@ -50,6 +50,7 @@ typedef enum MpPacketType
     MPT_PLAYERS_INFO_REQUEST,
     MPT_PLAYERS_INFO,
     MPT_ACTOR_INFO,
+    MPT_ACTORS_INFO,
 } MpPacketType;
 
 typedef struct MpPacketHead
@@ -99,5 +100,18 @@ typedef struct MpPacketActorInfo
     MpPacketHead head;
     MpActorInfo mp_actor_info;
 } MpPacketActorInfo;
+
+typedef struct MpInfoWrapper
+{
+    unsigned char id;
+    unsigned char payload[];
+} MpInfoWrapper;
+
+typedef struct MpPacketActorsInfo
+{
+    MpPacketHead head;
+    unsigned char actors_number;
+    MpInfoWrapper info_wrapper[];
+} MpPacketActorsInfo;
 
 #endif /* MULTIPLAYER_PROTOCOL */

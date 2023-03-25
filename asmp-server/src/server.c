@@ -52,18 +52,8 @@ static void send_players_info_(NetClientId destination)
     }
 }
 
-void on_connect_(NetClientId id)
-{
-    printf("!!mp connect %d\n", id);
-}
 
-void on_disconnect_(NetClientId id)
-{
-    printf("mp disconnect %d\n", id);
-    mem_set(&server.players[id], 0, sizeof(server.players[id]));
-}
-
-void on_recv_(NetCPacket* packet, int size)
+static void on_recv_(NetCPacket* packet, int size)
 {
     if (size < (int)sizeof(NetCPacket))
     {
@@ -122,9 +112,6 @@ bool mp_server_init(unsigned short port, int max_clients)
     server.ns = net_server_create(port, max_clients, 5000, 5000);
     if (server.ns)
     {
-        net_server_set_recv_callback(server.ns, on_recv_);
-        net_server_set_connect_callback(server.ns, on_connect_);
-        net_server_set_disconnect_callback(server.ns, on_disconnect_);
         strcpy(server.map_name, "maps\\survive_01.map");
         server.players = mem_alloc(sizeof(server.players[0]) * max_clients);
         if (server.players)
@@ -140,5 +127,16 @@ void mp_server_destroy(void)
     if (server.ns)
     {
         net_server_destroy(server.ns);
+    }
+}
+
+void mp_server_tick(void)
+{
+    net_server_tick(server.ns);
+    char buf[2048];
+    int size;
+    while((size = net_server_dequeue_packet(server.ns, (NetCPacket*)buf)))
+    {
+        on_recv_((NetCPacket*)buf, size);
     }
 }

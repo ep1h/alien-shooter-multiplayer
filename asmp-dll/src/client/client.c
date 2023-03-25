@@ -145,6 +145,8 @@ void handle_connecting_(MpClient* client)
                                                 nsi->max_clients);
                     if (client->players)
                     {
+                        mem_set(client->players, 0,
+                                sizeof(client->players[0]) * nsi->max_clients);
                         cs = CS_TOP_LEVEL_CONNECTED;
                         break;
                     }
@@ -235,6 +237,22 @@ void handle_connected_(MpClient* client)
                     }
                     break;
                 }
+                break;
+            }
+            case MPT_ACTORS_INFO:
+            {
+                MpPacketActorsInfo* mpai = (MpPacketActorsInfo*)mp;
+                for (int i = 0; i < mpai->actors_number; i++)
+                {
+                    MpInfoWrapper* iw = (MpInfoWrapper*)((
+                        ((NetByte*)mpai->info_wrapper) +
+                        i * (sizeof(MpInfoWrapper) + sizeof(MpActorInfo))));
+
+                    MpActorInfo* ai = (MpActorInfo*)(iw->payload);
+                    mem_copy(&client->players[iw->id].mp_player.actor_info, ai,
+                             sizeof(*ai));
+                }
+                break;
             }
             default:
             {

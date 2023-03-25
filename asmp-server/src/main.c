@@ -3,23 +3,19 @@
 
 #ifndef EZTEST
 
-
 int main(int argc, char* argv[])
 {
     (void)argc;
     (void)argv;
-
-    if (!mp_server_init(8888, 4))
+    MpServer* server = mp_server_create(8888, 4);
+    if (server)
     {
-        return -1;
+        while (1)
+        {
+            mp_server_tick(server);
+        }
+        mp_server_destroy(server);
     }
-
-    while (1)
-    {
-        mp_server_tick();
-    }
-
-    mp_server_destroy();
     return 0;
 }
 

@@ -68,6 +68,7 @@ typedef struct Multiplayer
     Client* clients;
 } Multiplayer;
 
+long(__stdcall* EndScene_orig)(void*);
 static Multiplayer* mp = 0;
 
 static const char mainmenu_file_[] = "maps\\asmp_mainmenu.men";
@@ -77,6 +78,7 @@ static bool read_play_menu_(PlayMenu* out_play_menu);
 static bool parse_address_(const char* str, char* ip, uint16_t* port);
 static int __stdcall _load_menu_hook(const char** menu_file);
 static int __thiscall _Game__tick_hook(Game* this);
+static long __stdcall EndScene_hook(void* id3d8dev);
 static void state_play_menu_handler_(void);
 static void state_connected_handler_(void);
 static bool set_hooks_(void);
@@ -210,6 +212,11 @@ int __fastcall Game__wnd_proc_hook(Game* this, HWND hwnd, uint32_t msg,
     }
     return ((Game__wnd_proc_t)FUNC_GAME_WNDPROC)(ECX, EDX, hwnd, msg, wparam,
                                                  lparam);
+}
+
+long __stdcall EndScene_hook(void* id3d8dev)
+{
+    return EndScene_orig(id3d8dev);
 }
 
 static void state_play_menu_handler_(void)
@@ -398,7 +405,13 @@ static bool set_hooks_(void)
             if (hook_set_vmt((void**)&game_get_game()->__vftable->wnd_proc,
                              Game__wnd_proc_hook))
             {
-                return true;
+                EndScene_orig = hook_set_vmt(
+                    *(void***)(game_get_render()->IDirect3DDevice8) + 35,
+                    EndScene_hook);
+                if (EndScene_orig)
+                {
+                    return true;
+                }
             }
         }
     }

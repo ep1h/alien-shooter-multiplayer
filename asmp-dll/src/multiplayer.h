@@ -3,7 +3,9 @@
 
 #include <stdbool.h>
 
-bool multiplayer_init(void);
-void multiplayer_destroy(void);
+typedef struct Multiplayer Multiplayer;
+
+Multiplayer* multiplayer_create(void);
+void multiplayer_destroy(Multiplayer* mp);
 
 #endif /* MULTIPLAYER_H */

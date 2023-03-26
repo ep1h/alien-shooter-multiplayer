@@ -31,6 +31,7 @@ int mp_client_get_max_players(MpClient* client);
 
 const MpPlayer* mp_client_get_player(MpClient* client, unsigned char id);
 
+MpPlayer* mp_client_get_local_player(MpClient* client);
 void mp_client_update_local_actor_info(MpClient* client,
                                        const MpActorInfo* local_actor_info);
 

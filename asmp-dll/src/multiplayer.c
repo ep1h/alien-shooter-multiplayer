@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "multiplayer.h"
+#include "utils/mem/mem.h"
 #include "utils/hook/hook.h"
 #include "game/addresses.h"
 #include "game/game.h"
@@ -34,6 +35,14 @@ typedef enum StatePlayMenuSubstate
     SPMS_CONNECTED = 6
 } StatePlayMenuSubstate;
 
+typedef enum StateConnectedSubstate
+{
+    SCS_IDLE = 0,
+    SCS_WAIT_LOAD_MAP,
+    SCS_WAIT_SPAWN,
+    SCS_SPAWNED,
+} StateConnectedSubstate;
+
 typedef struct PlayMenu
 {
     EntText* nickname;
@@ -42,12 +51,19 @@ typedef struct PlayMenu
     Entity* connect_button;
 } PlayMenu;
 
-static State state_ = STATE_NONE;
-static char ip_[16] = {0};
-static uint16_t port_ = 0;
-static load_menu_t load_menu_tramp_ = 0;
-static char mainmenu_file_[] = "maps\\asmp_mainmenu.men";
-static MpClient* client_;
+typedef struct Multiplayer
+{
+    MpClient* client;
+    State state;
+    char ip[16];
+    uint16_t port;
+    load_menu_t load_menu_tramp;
+    StateConnectedSubstate connected_substate;
+} Multiplayer;
+
+static Multiplayer* mp = 0;
+
+static const char mainmenu_file_[] = "maps\\asmp_mainmenu.men";
 
 static EntPlayer* get_local_layer_(void);
 static bool read_play_menu_(PlayMenu* out_play_menu);
@@ -142,22 +158,22 @@ static int __stdcall _load_menu_hook(const char** menu_file)
     console_log("load_menu: %s\n", *menu_file);
     if (strcmp(*menu_file, "maps\\mainmenu.men") == 0)
     {
-        mp_client_disconnect(client_);
-        state_ = STATE_NONE;
-        char* p = mainmenu_file_;
-        return load_menu_tramp_((const char**)&p);
+        mp_client_disconnect(mp->client);
+        mp->state = STATE_NONE;
+        const char* p = mainmenu_file_;
+        return mp->load_menu_tramp((const char**)&p);
     }
     else if (strcmp(*menu_file, "maps\\asmp_play.men") == 0)
     {
-        state_ = STATE_PLAY_MENU;
+        mp->state = STATE_PLAY_MENU;
     }
-    return load_menu_tramp_(menu_file);
+    return mp->load_menu_tramp(menu_file);
 }
 
 static int __thiscall _Game__tick_hook(Game* this)
 {
-    mp_client_tick(client_);
-    switch (state_)
+    mp_client_tick(mp->client);
+    switch (mp->state)
     {
     case STATE_PLAY_MENU:
     {
@@ -210,14 +226,14 @@ static void state_play_menu_handler_(void)
             substate = SPMS_INVALID_NAME;
         }
         /* Check entered address */
-        else if (!parse_address_(play_menu.address->text_70, ip_, &port_))
+        else if (!parse_address_(play_menu.address->text_70, mp->ip, &mp->port))
         {
             /* Invalid address. */
             substate = SPMS_INVALID_ADDRESS;
         }
         else
         {
-            mp_client_connection_request(client_, ip_, port_,
+            mp_client_connection_request(mp->client, mp->ip, mp->port,
                                          play_menu.nickname->text_70);
             /* Disable button */
             Entity__set_anim(play_menu.connect_button, 0, ANI_MENUDISABLEDOWN);
@@ -235,13 +251,12 @@ static void state_play_menu_handler_(void)
     }
     case SPMS_CONNECTING:
     {
-        MpClientState mcs = mp_client_get_state(client_);
+        MpClientState mcs = mp_client_get_state(mp->client);
         if (mcs == MPS_CONNECTED)
         {
-            substate = SPMS_CONNECTED;
-            state_ = STATE_CONNECTED;
             play_menu.status->entity.entity.health = substate;
-            Game__load_map(game_get_game(), 0, mp_client_get_map_name(client_));
+            substate = SPMS_CONNECTED;
+            mp->state = STATE_CONNECTED;
         }
         else if (mcs == MPS_CONNECTION_FAILED)
         {
@@ -257,7 +272,7 @@ static void state_play_menu_handler_(void)
     }
     case SPMS_CONNECTED: // TODO: Remove this substate.
     {
-        state_ = STATE_CONNECTED;
+        mp->state = STATE_CONNECTED;
         break;
     }
     case SPMS_IDLE:
@@ -271,9 +286,43 @@ static void state_play_menu_handler_(void)
 
 static void state_connected_handler_(void)
 {
-    EntPlayer* local_player = get_local_layer_();
-    if (local_player)
+    switch (mp->connected_substate)
     {
+    case SCS_IDLE:
+    {
+        const char* map_name = mp_client_get_map_name(mp->client);
+        if (map_name && strlen(map_name))
+        {
+            Game__load_map(game_get_game(), 0, map_name);
+            mp->connected_substate = SCS_WAIT_LOAD_MAP;
+        }
+        break;
+    }
+    case SCS_WAIT_LOAD_MAP:
+    {
+        /* This intermediate state lasts one tick and is required for the game
+         * to load a map. */
+        mp->connected_substate = SCS_WAIT_SPAWN;
+        break;
+    }
+    case SCS_WAIT_SPAWN:
+    {
+        EntPlayer* local_player = get_local_layer_();
+        if (local_player && local_player->ent_unit.ent_object.entity.child)
+        {
+            mp->connected_substate = SCS_SPAWNED;
+        }
+        break;
+    }
+    case SCS_SPAWNED:
+    {
+        EntPlayer* local_player = get_local_layer_();
+        if (!local_player || !local_player->ent_unit.ent_object.entity.child)
+        {
+            mp->connected_substate = SCS_WAIT_SPAWN;
+            break;
+        }
+        /* Update local actor info in client structures */
         Entity* local_player_entity = &local_player->ent_unit.ent_object.entity;
         MpActorInfo mai;
         mai.x = local_player_entity->x;
@@ -283,14 +332,16 @@ static void state_connected_handler_(void)
         mai.health = local_player_entity->health;
         mai.direction_legs = local_player_entity->direction;
         mai.direction_torso = local_player_entity->child->direction;
-        mp_client_update_local_actor_info(client_, &mai);
+        mp_client_update_local_actor_info(mp->client, &mai);
+    }
+    break;
     }
 }
 
 static bool set_hooks_(void)
 {
-    load_menu_tramp_ = hook_set((void*)FUNC_LOAD_MENU, _load_menu_hook, 8);
-    if (load_menu_tramp_)
+    mp->load_menu_tramp = hook_set((void*)FUNC_LOAD_MENU, _load_menu_hook, 8);
+    if (mp->load_menu_tramp)
     {
         if (hook_set_vmt((void**)&game_get_game()->__vftable->tick,
                          _Game__tick_hook))
@@ -305,20 +356,34 @@ static bool set_hooks_(void)
     return false;
 }
 
-bool multiplayer_init(void)
+Multiplayer* multiplayer_create(void)
 {
-    if (set_hooks_())
+    if (mp)
     {
-        client_ = mp_client_create();
-        if (client_)
-        {
-            return true;
-        }
+        return mp;
     }
-    return false;
+    mp = mem_alloc(sizeof(Multiplayer));
+    if (mp)
+    {
+        mem_set(mp, 0, sizeof(*mp));
+        if (set_hooks_())
+        {
+            mp->client = mp_client_create();
+            if (mp->client)
+            {
+                return mp;
+            }
+        }
+        mem_free(mp);
+    }
+    return 0;
 }
 
-void multiplayer_destroy(void)
+void multiplayer_destroy(Multiplayer* mp)
 {
-    mp_client_destroy(client_);
+    if (mp)
+    {
+        mp_client_destroy(mp->client);
+        mp = 0;
+    }
 }

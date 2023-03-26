@@ -419,6 +419,18 @@ const MpPlayer* mp_client_get_player(MpClient* client, unsigned char id)
     return 0;
 }
 
+MpPlayer* mp_client_get_local_player(MpClient* client)
+{
+    if (client)
+    {
+        if (client->players)
+        {
+            return &client->players[net_client_get_id(client->nc)].mp_player;
+        }
+    }
+    return 0;
+}
+
 void mp_client_update_local_actor_info(MpClient* client,
                                        const MpActorInfo* local_actor_info)
 {

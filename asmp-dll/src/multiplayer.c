@@ -51,6 +51,12 @@ typedef struct PlayMenu
     Entity* connect_button;
 } PlayMenu;
 
+typedef struct Client
+{
+    Entity* entity;
+    MpPlayer* mp_player;
+} Client;
+
 typedef struct Multiplayer
 {
     MpClient* client;
@@ -59,6 +65,7 @@ typedef struct Multiplayer
     uint16_t port;
     load_menu_t load_menu_tramp;
     StateConnectedSubstate connected_substate;
+    Client* clients;
 } Multiplayer;
 
 static Multiplayer* mp = 0;
@@ -255,8 +262,16 @@ static void state_play_menu_handler_(void)
         if (mcs == MPS_CONNECTED)
         {
             play_menu.status->entity.entity.health = substate;
-            substate = SPMS_CONNECTED;
-            mp->state = STATE_CONNECTED;
+            mp->clients = mem_alloc(sizeof(*mp->clients) *
+                                    mp_client_get_max_players(mp->client));
+            if (mp->clients)
+            {
+                mem_set(mp->clients, 0,
+                        sizeof(*mp->clients) *
+                            mp_client_get_max_players(mp->client));
+                substate = SPMS_CONNECTED;
+                mp->state = STATE_CONNECTED;
+            }
         }
         else if (mcs == MPS_CONNECTION_FAILED)
         {
@@ -333,8 +348,42 @@ static void state_connected_handler_(void)
         mai.direction_legs = local_player_entity->direction;
         mai.direction_torso = local_player_entity->child->direction;
         mp_client_update_local_actor_info(mp->client, &mai);
+        /* Update remote actors info */
+        for (int i = 0; i < mp_client_get_max_players(mp->client); i++)
+        {
+            if (i == mp_client_get_local_player_id(mp->client))
+            {
+                continue;
+            }
+            const MpPlayer* p = mp_client_get_player(mp->client, i);
+            if (p)
+            {
+                if (!mp->clients[i].entity)
+                {
+                    mp->clients[i]
+                        .entity = game_get_game()->__vftable->create_entity(
+                        game_get_game(), 0,
+                        game_get_game()->vids[VID_009_UNIT_PLAYER_MALE_LEGS],
+                        p->actor_info.x, p->actor_info.y, p->actor_info.z, 0,
+                        0);
+                }
+                if (!mp->clients[i].entity || !mp->clients[i].entity->child)
+                {
+                    continue;
+                }
+                Entity__move(mp->clients[i].entity, 0, p->actor_info.x,
+                             p->actor_info.y, p->actor_info.z);
+                mp->clients[i].entity->velocity = p->actor_info.velocity;
+                Entity__rotate(mp->clients[i].entity, 0,
+                               p->actor_info.direction_legs);
+                Entity__rotate(mp->clients[i].entity->child, 0,
+                               p->actor_info.direction_torso);
+                mp->clients[i].entity->velocity = p->actor_info.velocity;
+                mp->clients[i].entity->health = p->actor_info.health;
+            }
+        }
+        break;
     }
-    break;
     }
 }
 

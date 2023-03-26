@@ -229,8 +229,11 @@ static int __thiscall EntPlayer__set_armed_weapon_hook(EntPlayer* this,
         mp->EntPlayer__set_armed_weapon_tramp(ECX, EDX, weapon_slot_id);
     if (result && ECX == get_local_layer_())
     {
+        console_log("AW 1\n");
         // TODO: Update armed weapon info in client here.
     }
+    console_log("AW 2\n");
+
     return result;
 }
 
@@ -361,15 +364,17 @@ static void state_connected_handler_(void)
         }
         /* Update local actor info in client structures */
         Entity* local_player_entity = &local_player->ent_unit.ent_object.entity;
-        MpActorInfo mai;
-        mai.x = local_player_entity->x;
-        mai.y = local_player_entity->y;
-        mai.z = local_player_entity->z;
-        mai.velocity = local_player_entity->velocity;
-        mai.health = local_player_entity->health;
-        mai.direction_legs = local_player_entity->direction;
-        mai.direction_torso = local_player_entity->child->direction;
-        mp_client_update_local_actor_info(mp->client, &mai);
+        MpPlayer* mp_player_local = mp_client_get_local_player(mp->client);
+        mp_player_local->actor_info.x = local_player_entity->x;
+        mp_player_local->actor_info.y = local_player_entity->y;
+        mp_player_local->actor_info.z = local_player_entity->z;
+        mp_player_local->actor_info.velocity = local_player_entity->velocity;
+        mp_player_local->actor_info.direction_legs =
+            local_player_entity->direction;
+        mp_player_local->actor_info.direction_torso =
+            local_player_entity->child->direction;
+        mp_player_local->actor_info.health = local_player_entity->health;
+
         /* Update remote actors info */
         for (int i = 0; i < mp_client_get_max_players(mp->client); i++)
         {

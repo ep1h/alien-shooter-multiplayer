@@ -64,6 +64,7 @@ typedef struct Multiplayer
     char ip[16];
     uint16_t port;
     load_menu_t load_menu_tramp;
+    EntPlayer__set_armed_weapon_t EntPlayer__set_armed_weapon_tramp;
     StateConnectedSubstate connected_substate;
     Client* clients;
 } Multiplayer;
@@ -79,6 +80,8 @@ static bool parse_address_(const char* str, char* ip, uint16_t* port);
 static int __stdcall _load_menu_hook(const char** menu_file);
 static int __thiscall _Game__tick_hook(Game* this);
 static long __stdcall EndScene_hook(void* id3d8dev);
+static int __thiscall EntPlayer__set_armed_weapon_hook(EntPlayer* this,
+                                                       int weapon_slot_id);
 static void state_play_menu_handler_(void);
 static void state_connected_handler_(void);
 static bool set_hooks_(void);
@@ -217,6 +220,18 @@ int __fastcall Game__wnd_proc_hook(Game* this, HWND hwnd, uint32_t msg,
 long __stdcall EndScene_hook(void* id3d8dev)
 {
     return EndScene_orig(id3d8dev);
+}
+
+static int __thiscall EntPlayer__set_armed_weapon_hook(EntPlayer* this,
+                                                       int weapon_slot_id)
+{
+    int result =
+        mp->EntPlayer__set_armed_weapon_tramp(ECX, EDX, weapon_slot_id);
+    if (result && ECX == get_local_layer_())
+    {
+        // TODO: Update armed weapon info in client here.
+    }
+    return result;
 }
 
 static void state_play_menu_handler_(void)
@@ -410,7 +425,13 @@ static bool set_hooks_(void)
                     EndScene_hook);
                 if (EndScene_orig)
                 {
-                    return true;
+                    mp->EntPlayer__set_armed_weapon_tramp =
+                        hook_set((void*)FUNC_ENT_PLAYER_SET_ARMED_WEAPON,
+                                 EntPlayer__set_armed_weapon_hook, 5);
+                    if (mp->EntPlayer__set_armed_weapon_tramp)
+                    {
+                        return true;
+                    }
                 }
             }
         }

@@ -6,8 +6,7 @@
 #include "utils/console/console.h"
 #include "utils/time/time.h"
 
-#define REQUEST_DELAY_MS          1000
-#define ACTOR_INFO_UPDATE_RATE_MS 60
+#define REQUEST_DELAY_MS 1000
 
 typedef struct RequestInfo
 {
@@ -31,6 +30,7 @@ typedef struct MpClient
     Player* players;
     RequestInfo client_info_request;
     NetTime actor_info_sent_time_ms;
+    MpServerConfiguration server_configuration;
     char map_name[128];
 } MpClient;
 
@@ -112,7 +112,8 @@ void handle_connecting_(MpClient* client)
         int name_len = strlen(client->player_name);
         unsigned char
             mpcr_buf[sizeof(MpCPacketConnectionRequest) + MP_MAX_NAME_LEN + 1];
-        MpCPacketConnectionRequest* mpcr = (MpCPacketConnectionRequest*)mpcr_buf;
+        MpCPacketConnectionRequest* mpcr =
+            (MpCPacketConnectionRequest*)mpcr_buf;
         mpcr->head.type = MPT_C_CONNECTION_REQUEST;
         mpcr->name_len = name_len;
         strcpy(mpcr->name, client->player_name);
@@ -133,6 +134,10 @@ void handle_connecting_(MpClient* client)
                 (MpSPacketConnectionResponse*)np->payload;
             if (mpcr->head.type == MPT_S_CONNECTION_RESPONSE)
             {
+                /* Store server configuration */
+                mem_copy(&client->server_configuration,
+                         &mpcr->server_configuration,
+                         sizeof(client->server_configuration));
                 /* Store map name */
                 strncpy(client->map_name, mpcr->server_info.map_name,
                         mpcr->server_info.map_name_len);
@@ -184,7 +189,8 @@ void handle_connected_(MpClient* client)
         client->actor_info_sent_time_ms = time;
     }
     /* Send required packets */
-    if ((time - client->actor_info_sent_time_ms) > ACTOR_INFO_UPDATE_RATE_MS)
+    if ((time - client->actor_info_sent_time_ms) >
+        client->server_configuration.actor_info_update_rate_ms)
     {
         client->actor_info_sent_time_ms = time;
         MpCPacketActorInfo mpai;

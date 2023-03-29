@@ -4,6 +4,12 @@
 #include <stdint.h>
 
 #define MP_MAX_NAME_LEN 15
+#define MP_ACTOR_INFO_UPDATE_RATE_MS 60
+
+typedef struct MpServerConfiguration
+{
+    uint32_t actor_info_update_rate_ms;
+} MpServerConfiguration;
 
 typedef struct MpServerInfo
 {
@@ -72,6 +78,7 @@ typedef struct MpCPacketConnectionRequest
 typedef struct MpSPacketConnectionResponse
 {
     MpPacketHead head;
+    MpServerConfiguration server_configuration;
     MpServerInfo server_info;
 } MpSPacketConnectionResponse;
 

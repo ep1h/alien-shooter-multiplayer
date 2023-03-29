@@ -72,6 +72,7 @@ typedef struct Multiplayer
 } Multiplayer;
 
 long(__stdcall* EndScene_orig)(void*);
+static Entity__action_t EntPlayer__action_orig = 0;
 static Multiplayer* mp = 0;
 
 static const char mainmenu_file_[] = "maps\\asmp_mainmenu.men";
@@ -237,6 +238,18 @@ static int __thiscall EntPlayer__set_armed_weapon_hook(EntPlayer* this,
             mp_player->actor_info.armed_weapon = weapon_slot_id;
         }
     }
+    return result;
+}
+
+static int __thiscall EntPlayer__action_hook(Entity* this, enEntAction action,
+                                             void* a3, void* a4, void* a5)
+{
+    if (ECX == (Entity*)get_local_layer_() && action == ACT_COOR_ATTACK)
+    {
+        /* a3 = x */
+        /* a4 = y */
+    }
+    int result = EntPlayer__action_orig(ECX, EDX, action, a3, a4, a5);
     return result;
 }
 
@@ -453,7 +466,13 @@ static bool set_hooks_(void)
                                  EntPlayer__set_armed_weapon_hook, 5);
                     if (mp->EntPlayer__set_armed_weapon_tramp)
                     {
-                        return true;
+                        EntPlayer__action_orig = hook_set_vmt(
+                            (void**)&((Entity_vtbl*)ENT_PLAYER_VTBL)->action,
+                            EntPlayer__action_hook);
+                        if (EntPlayer__action_orig)
+                        {
+                            return true;
+                        }
                     }
                 }
             }

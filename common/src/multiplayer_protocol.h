@@ -32,6 +32,7 @@ typedef struct MpActorInfo
     uint8_t direction_legs;
     uint8_t direction_torso;
     uint8_t health;
+    uint8_t armed_weapon;
 } MpActorInfo;
 
 typedef struct MpPlayer

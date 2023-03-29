@@ -10,6 +10,7 @@
 #include "utils/console/console.h"
 #include "gameutils.h"
 #include "game/types/entities/EntText.h"
+#include "game/types/vids/Vid.h"
 #include "client/client.h"
 
 #define STATUSBAR_NDIR     0
@@ -54,6 +55,7 @@ typedef struct PlayMenu
 typedef struct Client
 {
     Entity* entity;
+    Vid vid;
     MpPlayer* mp_player;
 } Client;
 
@@ -229,11 +231,12 @@ static int __thiscall EntPlayer__set_armed_weapon_hook(EntPlayer* this,
         mp->EntPlayer__set_armed_weapon_tramp(ECX, EDX, weapon_slot_id);
     if (result && ECX == get_local_layer_())
     {
-        console_log("AW 1\n");
-        // TODO: Update armed weapon info in client here.
+        MpPlayer* mp_player = mp_client_get_local_player(mp->client);
+        if (mp_player)
+        {
+            mp_player->actor_info.armed_weapon = weapon_slot_id;
+        }
     }
-    console_log("AW 2\n");
-
     return result;
 }
 
@@ -387,12 +390,25 @@ static void state_connected_handler_(void)
             {
                 if (!mp->clients[i].entity)
                 {
-                    mp->clients[i]
-                        .entity = game_get_game()->__vftable->create_entity(
-                        game_get_game(), 0,
+                    mem_copy(
+                        &mp->clients[i].vid,
                         game_get_game()->vids[VID_009_UNIT_PLAYER_MALE_LEGS],
-                        p->actor_info.x, p->actor_info.y, p->actor_info.z, 0,
-                        0);
+                        sizeof(Vid));
+                    mp->clients[i].entity =
+                        game_get_game()->__vftable->create_entity(
+                            game_get_game(), 0, &mp->clients[i].vid,
+                            p->actor_info.x, p->actor_info.y, p->actor_info.z,
+                            0, 0);
+                    if (mp->clients[i].entity)
+                    {
+                        /* Add weapons */
+                        for (int j = 2; j <= 9; j++)
+                        {
+                            mp->clients[i].entity->__vftable->action(
+                                mp->clients[i].entity, 0, ACT_ADD_ITEM,
+                                (void*)(260 + j), 0, 0);
+                        }
+                    }
                 }
                 if (!mp->clients[i].entity || !mp->clients[i].entity->child)
                 {
@@ -407,6 +423,8 @@ static void state_connected_handler_(void)
                                p->actor_info.direction_torso);
                 mp->clients[i].entity->velocity = p->actor_info.velocity;
                 mp->clients[i].entity->health = p->actor_info.health;
+                EntPlayer__set_armed_weapon((EntPlayer*)mp->clients[i].entity,
+                                            0, p->actor_info.armed_weapon);
             }
         }
         break;

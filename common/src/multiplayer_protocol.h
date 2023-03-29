@@ -97,12 +97,14 @@ typedef struct MpSPacketPlayersInfo
 typedef struct MpCPacketActorInfo
 {
     MpPacketHead head;
+    uint32_t timestamp_ms;
     MpActorInfo mp_actor_info;
 } MpCPacketActorInfo;
 
 typedef struct MpInfoWrapper
 {
     unsigned char id;
+    uint32_t timestamp_ms;
     unsigned char payload[];
 } MpInfoWrapper;
 

@@ -194,6 +194,7 @@ void handle_connected_(MpClient* client)
     {
         client->actor_info_sent_time_ms = time;
         MpCPacketActorInfo mpai;
+        mpai.timestamp_ms = time_get_ms();
         mpai.head.type = MPT_C_ACTOR_INFO;
         mem_copy(&mpai.mp_actor_info,
                  &client->players[net_client_get_id(client->nc)]

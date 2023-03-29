@@ -9,6 +9,7 @@
 typedef struct Player
 {
     MpPlayer mp_player;
+    uint32_t last_actor_info_timestamp_ms;
     bool is_online;
 } Player;
 
@@ -46,6 +47,8 @@ static void send_actors_info_(MpServer* server)
                     p->actors_number *
                         (sizeof(MpInfoWrapper) + sizeof(MpActorInfo))));
                 dst_iw->id = j;
+                dst_iw->timestamp_ms =
+                    server->players[j].last_actor_info_timestamp_ms;
                 mem_copy(&dst_iw->payload,
                          &server->players[j].mp_player.actor_info,
                          sizeof(server->players[j].mp_player.actor_info));
@@ -130,10 +133,16 @@ static void on_recv_(MpServer* server, NetCPacket* packet, int size)
     }
     case MPT_C_ACTOR_INFO:
     {
-        /* Store actor info */
         MpCPacketActorInfo* mpp = (MpCPacketActorInfo*)(mp_packet);
-        mem_copy(&server->players[sender].mp_player.actor_info,
-                 &mpp->mp_actor_info, sizeof(mpp->mp_actor_info));
+        /* Store actor info */
+        if (mpp->timestamp_ms >
+            server->players[sender].last_actor_info_timestamp_ms)
+        {
+            server->players[sender].last_actor_info_timestamp_ms =
+                mpp->timestamp_ms;
+            mem_copy(&server->players[sender].mp_player.actor_info,
+                     &mpp->mp_actor_info, sizeof(mpp->mp_actor_info));
+        }
         break;
     }
     default:

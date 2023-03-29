@@ -34,7 +34,7 @@ static void send_actors_info_(MpServer* server)
         }
         NetByte buf[1024] = {0};
         MpPacketActorsInfo* p = (MpPacketActorsInfo*)buf;
-        p->head.type = MPT_ACTORS_INFO;
+        p->head.type = MPT_S_ACTORS_INFO;
 
         /* Build packet for 'i' player */
         for (int j = 0; j < net_server_get_info(server->ns)->max_clients; j++)
@@ -64,8 +64,8 @@ static void send_players_info_(MpServer* server, NetClientId destination)
 {
     const NetServerInfo* nsi = net_server_get_info(server->ns);
     unsigned char buf[1024];
-    MpPacketPlayersInfo* mppi = (MpPacketPlayersInfo*)buf;
-    mppi->head.type = MPT_PLAYERS_INFO;
+    MpSPacketPlayersInfo* mppi = (MpSPacketPlayersInfo*)buf;
+    mppi->head.type = MPT_S_PLAYERS_INFO_RESPONSE;
     if (nsi)
     {
         unsigned char cur_idx = 0;
@@ -83,7 +83,7 @@ static void send_players_info_(MpServer* server, NetClientId destination)
         mppi->players_number = cur_idx;
         net_server_send(
             server->ns, destination, (MpPacket*)mppi,
-            sizeof(MpPacketPlayersInfo) + sizeof(MpPlayer) * cur_idx, 0);
+            sizeof(MpSPacketPlayersInfo) + sizeof(MpPlayer) * cur_idx, 0);
     }
 }
 
@@ -97,19 +97,19 @@ static void on_recv_(MpServer* server, NetCPacket* packet, int size)
     NetClientId sender = packet->chead.sender;
     switch (mp_packet->head.type)
     {
-    case MPT_CONNECTION_REQUEST:
+    case MPT_C_CONNECTION_REQUEST:
     {
-        MpPacketConnectionRequest* mpp = (MpPacketConnectionRequest*)mp_packet;
+        MpCPacketConnectionRequest* mpp = (MpCPacketConnectionRequest*)mp_packet;
 
-        char buf[sizeof(MpPacketConnectionResponse) + 255];
-        MpPacketConnectionResponse* mpcr = (MpPacketConnectionResponse*)buf;
+        char buf[sizeof(MpSPacketConnectionResponse) + 255];
+        MpSPacketConnectionResponse* mpcr = (MpSPacketConnectionResponse*)buf;
         int map_name_size = strlen(server->map_name) + 1;
-        mpcr->head.type = MPT_CONNECTION_RESPONSE;
+        mpcr->head.type = MPT_S_CONNECTION_RESPONSE;
         mpcr->server_info.map_name_len = map_name_size - 1;
         strcpy(mpcr->server_info.map_name, server->map_name);
 
         net_server_send(server->ns, sender, (MpPacket*)mpcr,
-                        sizeof(MpPacketConnectionResponse) + map_name_size, 1);
+                        sizeof(MpSPacketConnectionResponse) + map_name_size, 1);
         mem_set(&server->players[sender], 0, sizeof(server->players[sender]));
         /* Store player name */
         strncpy(
@@ -121,15 +121,15 @@ static void on_recv_(MpServer* server, NetCPacket* packet, int size)
         send_players_info_(server, NET_CLIENT_ID_ALL_BUT(sender));
         break;
     }
-    case MPT_PLAYERS_INFO_REQUEST:
+    case MPT_C_PLAYERS_INFO_REQUEST:
     {
         send_players_info_(server, sender);
         break;
     }
-    case MPT_ACTOR_INFO:
+    case MPT_C_ACTOR_INFO:
     {
         /* Store actor info */
-        MpPacketActorInfo* mpp = (MpPacketActorInfo*)(mp_packet);
+        MpCPacketActorInfo* mpp = (MpCPacketActorInfo*)(mp_packet);
         mem_copy(&server->players[sender].mp_player.actor_info,
                  &mpp->mp_actor_info, sizeof(mpp->mp_actor_info));
         break;

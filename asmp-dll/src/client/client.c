@@ -111,13 +111,13 @@ void handle_connecting_(MpClient* client)
         /* Send top level conenction request */
         int name_len = strlen(client->player_name);
         unsigned char
-            mpcr_buf[sizeof(MpPacketConnectionRequest) + MP_MAX_NAME_LEN + 1];
-        MpPacketConnectionRequest* mpcr = (MpPacketConnectionRequest*)mpcr_buf;
-        mpcr->head.type = MPT_CONNECTION_REQUEST;
+            mpcr_buf[sizeof(MpCPacketConnectionRequest) + MP_MAX_NAME_LEN + 1];
+        MpCPacketConnectionRequest* mpcr = (MpCPacketConnectionRequest*)mpcr_buf;
+        mpcr->head.type = MPT_C_CONNECTION_REQUEST;
         mpcr->name_len = name_len;
         strcpy(mpcr->name, client->player_name);
         net_client_send(client->nc, mpcr,
-                        sizeof(MpPacketConnectionRequest) + name_len + 1, 1);
+                        sizeof(MpCPacketConnectionRequest) + name_len + 1, 1);
         cs = CS_TOP_LEVEL_CONNECTING;
         break;
     }
@@ -129,9 +129,9 @@ void handle_connecting_(MpClient* client)
         for (int size = net_client_dequeue_packet(client->nc, np); size;
              size = net_client_dequeue_packet(client->nc, np))
         {
-            MpPacketConnectionResponse* mpcr =
-                (MpPacketConnectionResponse*)np->payload;
-            if (mpcr->head.type == MPT_CONNECTION_RESPONSE)
+            MpSPacketConnectionResponse* mpcr =
+                (MpSPacketConnectionResponse*)np->payload;
+            if (mpcr->head.type == MPT_S_CONNECTION_RESPONSE)
             {
                 /* Store map name */
                 strncpy(client->map_name, mpcr->server_info.map_name,
@@ -176,9 +176,9 @@ void handle_connected_(MpClient* client)
           REQUEST_DELAY_MS)) ||
         (client->client_info_request.send_time_ms == 0))
     {
-        console_log("send MpPacketPlayersInfoRequest\n");
-        MpPacketPlayersInfoRequest mppir;
-        mppir.head.type = MPT_PLAYERS_INFO_REQUEST;
+        console_log("send MpCPacketPlayersInfoRequest\n");
+        MpCPacketPlayersInfoRequest mppir;
+        mppir.head.type = MPT_C_PLAYERS_INFO_REQUEST;
         net_client_send(client->nc, &mppir, sizeof(mppir), 5);
         client->client_info_request.send_time_ms = time;
         client->actor_info_sent_time_ms = time;
@@ -187,8 +187,8 @@ void handle_connected_(MpClient* client)
     if ((time - client->actor_info_sent_time_ms) > ACTOR_INFO_UPDATE_RATE_MS)
     {
         client->actor_info_sent_time_ms = time;
-        MpPacketActorInfo mpai;
-        mpai.head.type = MPT_ACTOR_INFO;
+        MpCPacketActorInfo mpai;
+        mpai.head.type = MPT_C_ACTOR_INFO;
         mem_copy(&mpai.mp_actor_info,
                  &client->players[net_client_get_id(client->nc)]
                       .mp_player.actor_info,
@@ -208,11 +208,11 @@ void handle_connected_(MpClient* client)
             MpPacket* mp = (MpPacket*)p->payload;
             switch (mp->head.type)
             {
-            case MPT_PLAYERS_INFO:
+            case MPT_S_PLAYERS_INFO_RESPONSE:
             {
                 console_log("MPT_PLAYERS_INFO\n");
                 client->client_info_request.recv_time_ms = time;
-                MpPacketPlayersInfo* mppi = (MpPacketPlayersInfo*)mp;
+                MpSPacketPlayersInfo* mppi = (MpSPacketPlayersInfo*)mp;
 
                 const NetServerInfo* nsi =
                     net_client_get_server_info(client->nc);
@@ -239,7 +239,7 @@ void handle_connected_(MpClient* client)
                 }
                 break;
             }
-            case MPT_ACTORS_INFO:
+            case MPT_S_ACTORS_INFO:
             {
                 MpPacketActorsInfo* mpai = (MpPacketActorsInfo*)mp;
                 for (int i = 0; i < mpai->actors_number; i++)

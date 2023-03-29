@@ -6,8 +6,6 @@
 #include "multiplayer_protocol.h"
 #include "utils/time/time.h"
 
-#define ACTORS_INFO_UPDATE_RATE_MS 60
-
 typedef struct Player
 {
     MpPlayer mp_player;
@@ -17,6 +15,7 @@ typedef struct Player
 typedef struct MpServer
 {
     NetServer* ns;
+    MpServerConfiguration configuration;
     char map_name[255];
     Player* players;
     NetTime prev_actors_info_updated_time_ms;
@@ -99,7 +98,8 @@ static void on_recv_(MpServer* server, NetCPacket* packet, int size)
     {
     case MPT_C_CONNECTION_REQUEST:
     {
-        MpCPacketConnectionRequest* mpp = (MpCPacketConnectionRequest*)mp_packet;
+        MpCPacketConnectionRequest* mpp =
+            (MpCPacketConnectionRequest*)mp_packet;
 
         char buf[sizeof(MpSPacketConnectionResponse) + 255];
         MpSPacketConnectionResponse* mpcr = (MpSPacketConnectionResponse*)buf;
@@ -107,6 +107,8 @@ static void on_recv_(MpServer* server, NetCPacket* packet, int size)
         mpcr->head.type = MPT_S_CONNECTION_RESPONSE;
         mpcr->server_info.map_name_len = map_name_size - 1;
         strcpy(mpcr->server_info.map_name, server->map_name);
+        mem_copy(&mpcr->server_configuration, &server->configuration,
+                 sizeof(server->configuration));
 
         net_server_send(server->ns, sender, (MpPacket*)mpcr,
                         sizeof(MpSPacketConnectionResponse) + map_name_size, 1);
@@ -155,6 +157,8 @@ MpServer* mp_server_create(unsigned short port, int max_clients)
                 mem_alloc(sizeof(server->players[0]) * max_clients);
             if (server->players)
             {
+                server->configuration.actor_info_update_rate_ms =
+                    MP_ACTOR_INFO_UPDATE_RATE_MS;
                 server->prev_actors_info_updated_time_ms = time_get_ms();
                 return server;
             }
@@ -173,7 +177,7 @@ void mp_server_destroy(MpServer* server)
         {
             net_server_destroy(server->ns);
         }
-        if(server->players)
+        if (server->players)
         {
             mem_free(server->players);
         }
@@ -192,7 +196,7 @@ void mp_server_tick(MpServer* server)
     }
     NetTime time = time_get_ms();
     if ((time - server->prev_actors_info_updated_time_ms) >=
-        ACTORS_INFO_UPDATE_RATE_MS)
+        server->configuration.actor_info_update_rate_ms)
     {
         send_actors_info_(server);
         server->prev_actors_info_updated_time_ms = time;

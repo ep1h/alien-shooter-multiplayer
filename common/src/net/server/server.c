@@ -1,3 +1,8 @@
+/**
+ * @file server.c
+ * @brief Implementation of server core component.
+ *
+ */
 #include "server.h"
 #include <winsock2.h>
 #include "../socket/socket.h"
@@ -7,6 +12,11 @@
 #include "utils/time/time.h"
 #include <stdio.h>
 
+/**
+ * @brief Information about client.
+ *
+ * Each connected client has an instance of this structure.
+ */
 typedef struct Client
 {
     bool is_connected;
@@ -14,15 +24,19 @@ typedef struct Client
     NetTime last_recvfrom_time_ms;
 } Client;
 
+/**
+ * @brief Information about server.
+ *
+ */
 typedef struct NetServer
 {
-    NetSocket* socket;
+    NetSocket* socket;   /* Socket for receiving/sending data */
     Queue* recv_queue;   /* Queue of CPacketInfo*/
     PQueue* send_pqueue; /* PQueue of SPacketInfo */
-    Client* clients;
-    NetServerInfo info;
-    NetTime time_ms;
-    NetTime last_check_delayed_clients_ms;
+    Client* clients;     /* Array of pointers to connected client information */
+    NetServerInfo info;  /* Server configuration */
+    NetTime time_ms;     /* Current time (in milliseconds) */
+    NetTime last_check_delayed_clients_ms; // TODO: Remove this field.
 } NetServer;
 
 typedef struct CPacketInfo
@@ -43,13 +57,61 @@ typedef struct SendPacketInfo
     SPacketInfo pi;
 } SendPacketInfo;
 
+/**
+ * @brief Places all received (since the last call to this function) data into
+ *        received packet queue.
+ *
+ * @param[in] server Server instance pointer.
+ */
 static void recv_(NetServer* server);
+
+/**
+ * @brief Sends all packets (added since the last call to this function) from
+ *        server send queue to client(s).
+ *
+ * @param[in] server Server instance pointer.
+ */
 static void send_(NetServer* server);
+
+/**
+ * @brief Connects a client to the server.
+ *
+ * @param[in] server  Server instance pointer.
+ * @param[in] address Address of client to be connected.
+ *
+ * @return NetClientId  ID assigned to the client, or NET_CLIENT_ID_INVALID in
+ * case of an error (e.g. no free slots)
+ */
 static NetClientId connect_client_(NetServer* server,
                                    const struct sockaddr_in* address);
+
+/**
+ * @brief Disconnect a client from the server.
+ *
+ * @param[in] server  Server instance pointer.
+ * @param[in] address Id of client to be disconnected.
+ */
 static void disconnect_client_(NetServer* server, NetClientId id);
+
+/**
+ * @brief Disconnect timed-out clients from the server.
+ *
+ * @param[in] server Server instance pointer.
+ */
 static void kick_delayed_clients_(NetServer* server);
+
+/**
+ * @brief Removes all packets from received packet queue.
+ *
+ * @param[in] server Server instance pointer.
+ */
 static void clear_recv_queue_(NetServer* server);
+
+/**
+ * @brief Removes all packets from packets to be sent queue.
+ *
+ * @param[in] server Server instance pointer.
+ */
 static void clear_send_pqueue_(NetServer* server);
 
 static void recv_(NetServer* server)
@@ -326,10 +388,10 @@ int net_server_dequeue_packet(NetServer* server, NetCPacket* packet)
     return 0;
 }
 
-void net_server_send(NetServer* server, NetClientId id, const void* buf,
-                     int size, NetPriority priority)
+void net_server_send(NetServer* server, NetClientId destination,
+                     const void* buf, int size, NetPriority priority)
 {
-    if ((id & ~NET_CLIENT_ID_ALL_BUT_FLAG) >= server->info.max_clients)
+    if ((destination & ~NET_CLIENT_ID_ALL_BUT_FLAG) >= server->info.max_clients)
     {
         return;
     }
@@ -337,7 +399,7 @@ void net_server_send(NetServer* server, NetClientId id, const void* buf,
     spi->pi.packet.shead.net_head.type = NPT_S_DATA;
     mem_copy(&spi->pi.packet.payload, buf, size);
     spi->pi.size = size + sizeof(spi->pi.packet);
-    spi->destination = id;
+    spi->destination = destination;
     pqueue_queue(server->send_pqueue, spi, priority);
 }
 

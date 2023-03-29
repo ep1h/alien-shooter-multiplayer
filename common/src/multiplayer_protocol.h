@@ -43,14 +43,12 @@ typedef struct MpPlayerInfo
 typedef enum MpPacketType
 {
     MPT_EMPTY = 0,
-    MPT_CONNECT,
-    MPT_DISCONNECT,
-    MPT_CONNECTION_REQUEST,
-    MPT_CONNECTION_RESPONSE,
-    MPT_PLAYERS_INFO_REQUEST,
-    MPT_PLAYERS_INFO,
-    MPT_ACTOR_INFO,
-    MPT_ACTORS_INFO,
+    MPT_C_CONNECTION_REQUEST,
+    MPT_S_CONNECTION_RESPONSE,
+    MPT_C_PLAYERS_INFO_REQUEST,
+    MPT_S_PLAYERS_INFO_RESPONSE,
+    MPT_C_ACTOR_INFO,
+    MPT_S_ACTORS_INFO,
 } MpPacketType;
 
 typedef struct MpPacketHead
@@ -64,42 +62,36 @@ typedef struct MpPacket
     unsigned char payload[];
 } MpPacket;
 
-typedef struct MpPacketConnect
-{
-    MpPacketHead head;
-    MpClientInfo client_info;
-} MpPacketConnect;
-
-typedef struct MpPacketConnectionRequest
+typedef struct MpCPacketConnectionRequest
 {
     MpPacketHead head;
     unsigned char name_len;
     char name[];
-} MpPacketConnectionRequest;
+} MpCPacketConnectionRequest;
 
-typedef struct MpPacketConnectionResponse
+typedef struct MpSPacketConnectionResponse
 {
     MpPacketHead head;
     MpServerInfo server_info;
-} MpPacketConnectionResponse;
+} MpSPacketConnectionResponse;
 
-typedef struct MpPacketPlayersInfoRequest
+typedef struct MpCPacketPlayersInfoRequest
 {
     MpPacketHead head;
-} MpPacketPlayersInfoRequest;
+} MpCPacketPlayersInfoRequest;
 
-typedef struct MpPacketPlayersInfo
+typedef struct MpSPacketPlayersInfo
 {
     MpPacketHead head;
     unsigned char players_number;
     MpPlayerInfo palyers[];
-} MpPacketPlayersInfo;
+} MpSPacketPlayersInfo;
 
-typedef struct MpPacketActorInfo
+typedef struct MpCPacketActorInfo
 {
     MpPacketHead head;
     MpActorInfo mp_actor_info;
-} MpPacketActorInfo;
+} MpCPacketActorInfo;
 
 typedef struct MpInfoWrapper
 {

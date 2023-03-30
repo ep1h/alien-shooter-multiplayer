@@ -1,3 +1,8 @@
+/**
+ * @file client.c
+ * @brief Client core implementation.
+ * 
+*/
 #include <winsock2.h>
 #include "client.h"
 #include "../socket/socket.h"
@@ -9,18 +14,29 @@
 #define NET_CLIENT_DEFAULT_RECV_TIMEOUT_MS 5000
 #define NET_CLIENT_DEFAULT_SEND_TIMEOUT_MS 5000
 
+/**
+ * @brief This type is used as a value in receive queue.
+ */
 typedef struct CPacketInfo
 {
     int size;
     NetCPacket packet;
 } CPacketInfo;
 
+/**
+ * @brief This type is used as a value in send priority queue.
+ */
 typedef struct SPacketInfo
 {
     int size;
     NetSPacket packet;
 } SPacketInfo;
 
+/**
+ * @brief Information about client. Only used internally by this component.
+ * Pointer to object of this type is used to interact with api provided by this
+ * component.
+ */
 typedef struct NetClient
 {
     NetClientState state;
@@ -35,9 +51,50 @@ typedef struct NetClient
     NetTime connection_request_time_ms;
 } NetClient;
 
+/**
+ * @brief Process client logic in state NCS_CONNECTING.
+ *
+ * While in this state client is waiting for connection response from server.
+ * If connection response is received and it contains valid client id, state of
+ * client will be changed to NCS_CONNECTED.
+ * Otherwise (waiting for connection response timed out or connection response
+ * contains invalid client id) state of client will be changed to
+ * NCS_CONNECTION_FAILED.
+ *
+ * @param[in] client Pointer to net client instance.
+ */
 static void state_connecting_handler_(NetClient* client);
+
+/**
+ * @brief Process client logic in NCS_CONNECTION_FAILED state.
+ *
+ * @param[in] client Pointer to net client instance.
+ */
 static void state_connection_failed_handler_(NetClient* client);
+
+/**
+ * @brief Process client logic in NCS_CONNECTED state. While in this state, the
+ *        client is connected and exchanging data with server.
+ *
+ * Each tick of client logic in this state should perform following actions:
+ * - Send all packets from send priority queue.
+ * - Send SYNC packet if required.
+ * - Receive all packets from socket and place them in receive queue.
+ *
+ * @param[in] client Pointer to net client instance.
+ */
 static void state_connected_handler_(NetClient* client);
+
+/**
+ * @brief Process client logic in NCS_DISCONNECTION state. This is a
+ *        transitional state between NCS_CONNECTED and NCS_DISCONNECTED states.
+ *
+ * In this state, client sends disconnection request to server, clears receive
+ * and send queues, resets client id, resets server info and switches state to
+ * NCS_DISCONNECTED.
+ *
+ * @param[in] client Pointer to net client instance.
+ */
 static void state_disconnection_handler_(NetClient* client);
 
 static void state_connecting_handler_(NetClient* client)

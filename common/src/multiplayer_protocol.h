@@ -3,27 +3,19 @@
 
 #include <stdint.h>
 
-#define MP_MAX_NAME_LEN 15
-#define MP_ACTOR_INFO_UPDATE_RATE_MS 60
+#define MP_MAX_NAME_LEN              15
+#define MP_MAX_MAP_NAME_LEN          24
+#define MP_RECV_TIMEOUT_MS           5000
+#define MP_SEND_TIMEOUT_MS           5000
+#define MP_ACTOR_SYNC_UPDATE_RATE_MS 250
 
 typedef struct MpServerConfiguration
 {
-    uint32_t actor_info_update_rate_ms;
+    uint16_t actor_sync_update_rate_ms;
+    char map_name[MP_MAX_MAP_NAME_LEN];
 } MpServerConfiguration;
 
-typedef struct MpServerInfo
-{
-    unsigned char map_name_len;
-    char map_name[];
-} MpServerInfo;
-
-typedef struct MpClientInfo
-{
-    unsigned char id;
-    char name[MP_MAX_NAME_LEN + 1];
-} MpClientInfo;
-
-typedef struct MpActorInfo
+typedef struct MpActor
 {
     float x;
     float y;
@@ -31,31 +23,29 @@ typedef struct MpActorInfo
     float velocity;
     uint8_t direction_legs;
     uint8_t direction_torso;
-    uint8_t health;
     uint8_t armed_weapon;
-} MpActorInfo;
+} MpActor;
+
+typedef struct MpUser
+{
+    char name[MP_MAX_NAME_LEN + 1];
+} MpUser;
 
 typedef struct MpPlayer
 {
-    MpClientInfo client_info;
-    MpActorInfo actor_info;
+    MpUser mp_user;
+    MpActor mp_actor;
 } MpPlayer;
-
-typedef struct MpPlayerInfo
-{
-    unsigned short id;
-    MpPlayer mp_player;
-} MpPlayerInfo;
 
 typedef enum MpPacketType
 {
     MPT_EMPTY = 0,
     MPT_C_CONNECTION_REQUEST,
-    MPT_S_CONNECTION_RESPONSE,
-    MPT_C_PLAYERS_INFO_REQUEST,
-    MPT_S_PLAYERS_INFO_RESPONSE,
-    MPT_C_ACTOR_INFO,
-    MPT_S_ACTORS_INFO,
+    MPT_S_CONENCTION_RESPONSE,
+    MPT_C_ACTOR_SYNC,
+    MPT_S_ACTORS_SYNC,
+    MPT_C_SHOOT,
+    MPT_S_SHOOT,
 } MpPacketType;
 
 typedef struct MpPacketHead
@@ -63,16 +53,10 @@ typedef struct MpPacketHead
     MpPacketType type;
 } MpPacketHead;
 
-typedef struct MpPacket
-{
-    MpPacketHead head;
-    unsigned char payload[];
-} MpPacket;
-
 typedef struct MpCPacketConnectionRequest
 {
     MpPacketHead head;
-    unsigned char name_len;
+    uint8_t name_len;
     char name[];
 } MpCPacketConnectionRequest;
 
@@ -80,40 +64,25 @@ typedef struct MpSPacketConnectionResponse
 {
     MpPacketHead head;
     MpServerConfiguration server_configuration;
-    MpServerInfo server_info;
 } MpSPacketConnectionResponse;
 
-typedef struct MpCPacketPlayersInfoRequest
+typedef struct MpCPacketActorSync
 {
     MpPacketHead head;
-} MpCPacketPlayersInfoRequest;
+    MpActor mp_actor;
+} MpCPacketActorSync;
 
-typedef struct MpSPacketPlayersInfo
+typedef struct MpSPacketActorSyncItem
+{
+    uint8_t id;
+    MpActor mp_actor;
+} MpSPacketActorSyncItem;
+
+typedef struct MpSPacketActorsSync
 {
     MpPacketHead head;
-    unsigned char players_number;
-    MpPlayerInfo palyers[];
-} MpSPacketPlayersInfo;
-
-typedef struct MpCPacketActorInfo
-{
-    MpPacketHead head;
-    uint32_t timestamp_ms;
-    MpActorInfo mp_actor_info;
-} MpCPacketActorInfo;
-
-typedef struct MpInfoWrapper
-{
-    unsigned char id;
-    uint32_t timestamp_ms;
-    unsigned char payload[];
-} MpInfoWrapper;
-
-typedef struct MpPacketActorsInfo
-{
-    MpPacketHead head;
-    unsigned char actors_number;
-    MpInfoWrapper info_wrapper[];
-} MpPacketActorsInfo;
+    uint8_t num_items;
+    MpSPacketActorSyncItem items[];
+} MpSPacketActorsSync;
 
 #endif /* MULTIPLAYER_PROTOCOL */

@@ -1,154 +1,172 @@
-#include <stdio.h>
+/**
+ * @file server.c
+ * @brief Top level server-side multiplayer logic.
+ *
+ */
 #include <string.h>
 #include "server.h"
-#include "utils/mem/mem.h"
-#include "net/server/server.h"
 #include "multiplayer_protocol.h"
+#include "net/server/server.h"
+#include "utils/mem/mem.h"
 #include "utils/time/time.h"
+#include <stdio.h> // TODO: Remove.
 
 typedef struct Player
 {
-    MpPlayer mp_player;
-    uint32_t last_actor_info_timestamp_ms;
-    bool is_online;
+    MpPlayer player;
+    bool is_connected;
+    NetTime actor_sync_updated_time_ms;
 } Player;
 
 typedef struct MpServer
 {
     NetServer* ns;
-    MpServerConfiguration configuration;
-    char map_name[255];
+    MpServerConfiguration server_configuration;
+    NetTime tick_time_ms;
     Player* players;
-    NetTime prev_actors_info_updated_time_ms;
+    NetTime prev_actors_sync_sent_time_ms;
 } MpServer;
 
-static void send_actors_info_(MpServer* server);
 
-static void send_actors_info_(MpServer* server)
+/**
+ * @brief process connection request packet.
+ *
+ * @param server A pointer to server instance.
+ * @param sender Sender low-level client id.
+ * @param packet A pointer to connection request packet.
+ */
+static void process_connection_request_(MpServer* server, NetClientId sender,
+                                        MpCPacketConnectionRequest* packet);
+
+/**
+ * @brief Process packets received since last tick.
+ *
+ * @param server A pointer to server instance.
+ */
+static void process_received_packets_(MpServer* server);
+
+/**
+ * @brief Builds and sends actors sync packets to all connected clients.
+ *
+ * Each client will receive information about other connected clients.
+ */
+static void send_actors_sync_(MpServer* server);
+
+
+static void process_connection_request_(MpServer* server, NetClientId sender,
+                                        MpCPacketConnectionRequest* packet)
 {
-    for (int i = 0; i < net_server_get_info(server->ns)->max_clients; i++)
+    printf("Connection request from %d\n", sender);
+    /* Store player name */
+    strncpy_s(server->players[sender].player.mp_user.name, MP_MAX_NAME_LEN + 1,
+              packet->name, MP_MAX_NAME_LEN);
+    /* Mark as connected */
+    server->players[sender].is_connected = true;
+    /* Send connection response */
+    MpSPacketConnectionResponse response;
+    response.head.type = MPT_S_CONENCTION_RESPONSE;
+    response.server_configuration = server->server_configuration;
+    net_server_send(server->ns, sender, &response, sizeof(response), 0);
+}
+
+static void process_received_packets_(MpServer* server)
+{
+    char buf[2048];
+    int size;
+    while ((size = net_server_dequeue_packet(server->ns, (NetCPacket*)buf)))
     {
-        if (!server->players[i].is_online)
+        if (size < (int)sizeof(NetCPacket))
         {
             continue;
         }
-        NetByte buf[1024] = {0};
-        MpPacketActorsInfo* p = (MpPacketActorsInfo*)buf;
-        p->head.type = MPT_S_ACTORS_INFO;
-
-        /* Build packet for 'i' player */
-        for (int j = 0; j < net_server_get_info(server->ns)->max_clients; j++)
+        NetCPacket* packet = (NetCPacket*)buf;
+        if (packet->chead.net_head.type != NPT_C_DATA)
         {
-            if (server->players[j].is_online && i != j)
-            {
-                // printf("build packed for %d: insert info about %d\n", i, j);
-                MpInfoWrapper* dst_iw = (MpInfoWrapper*)((
-                    ((NetByte*)p->info_wrapper) +
-                    p->actors_number *
-                        (sizeof(MpInfoWrapper) + sizeof(MpActorInfo))));
-                dst_iw->id = j;
-                dst_iw->timestamp_ms =
-                    server->players[j].last_actor_info_timestamp_ms;
-                mem_copy(&dst_iw->payload,
-                         &server->players[j].mp_player.actor_info,
-                         sizeof(server->players[j].mp_player.actor_info));
-                p->actors_number++;
-            }
+            continue;
         }
-        int size =
-            sizeof(MpPacketActorsInfo) +
-            (sizeof(MpInfoWrapper) + sizeof(MpActorInfo)) * p->actors_number;
-        net_server_send(server->ns, i, p, size, 0);
+        MpPacketHead* mp_head = (MpPacketHead*)packet->payload;
+        switch (mp_head->type)
+        {
+        case MPT_C_CONNECTION_REQUEST:
+        {
+            process_connection_request_(
+                server, packet->chead.sender,
+                (MpCPacketConnectionRequest*)packet->payload);
+            break;
+        }
+        case MPT_C_ACTOR_SYNC:
+        {
+            // printf("MPT_C_ACTOR_SYNC from %d | %.2f %.2f\n",
+            //        packet->chead.sender,
+            //        ((MpCPacketActorSync*)packet->payload)->mp_actor.x,
+            //        ((MpCPacketActorSync*)packet->payload)->mp_actor.y);
+            /* Update actor in server struct */
+            server->players[packet->chead.sender].player.mp_actor =
+                ((MpCPacketActorSync*)packet->payload)->mp_actor;
+            server->players[packet->chead.sender].actor_sync_updated_time_ms =
+                server->tick_time_ms;
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
     }
 }
 
-static void send_players_info_(MpServer* server, NetClientId destination)
+static void send_actors_sync_(MpServer* server)
 {
-    const NetServerInfo* nsi = net_server_get_info(server->ns);
-    unsigned char buf[1024];
-    MpSPacketPlayersInfo* mppi = (MpSPacketPlayersInfo*)buf;
-    mppi->head.type = MPT_S_PLAYERS_INFO_RESPONSE;
-    if (nsi)
+    uint8_t buf[1024]; // TODO: Use precalculated size.
+    MpSPacketActorsSync* packet = (MpSPacketActorsSync*)buf;
+    packet->head.type = MPT_S_ACTORS_SYNC;
+
+
+    for (NetClientId destination = 0;
+         destination < net_server_get_info(server->ns)->max_clients;
+         destination++)
     {
-        unsigned char cur_idx = 0;
-        for (NetClientId i = 0; i < nsi->max_clients; i++)
+        /* Build actors info sync packet only for connected players */
+        if (!server->players[destination].is_connected)
         {
-            if (server->players[i].is_online)
-            {
-                mppi->palyers[cur_idx].id = i;
-                mem_copy(&mppi->palyers[cur_idx].mp_player,
-                         &server->players[i].mp_player,
-                         sizeof(server->players[i].mp_player));
-                ++cur_idx;
-            }
+            continue;
         }
-        mppi->players_number = cur_idx;
+
+        /* Reset num_items for the player */
+        packet->num_items = 0;
+
+        /* Build actors sync packet for player with 'destination' id */
+        for (NetClientId i = 0;
+             i < net_server_get_info(server->ns)->max_clients; i++)
+        {
+            /* Ignore disconnected players */
+            if (!server->players[i].is_connected)
+            {
+                continue;
+            }
+            /* Ignore player who will receive this packet */
+            if (i == destination)
+            {
+                continue;
+            }
+            /* Ignore players who did not send actor sync yet */
+            if (server->players[i].actor_sync_updated_time_ms == 0)
+            {
+                continue;
+            }
+            // TODO: Ignore players who did not send actor sync for a long
+            //       time.
+
+            /* Add player's actor info to packet */
+            packet->items[packet->num_items].id = i;
+            packet->items[packet->num_items].mp_actor =
+                server->players[i].player.mp_actor;
+            packet->num_items++;
+        }
+        /* Send the packet */
         net_server_send(
-            server->ns, destination, (MpPacket*)mppi,
-            sizeof(MpSPacketPlayersInfo) + sizeof(MpPlayer) * cur_idx, 0);
-    }
-}
-
-static void on_recv_(MpServer* server, NetCPacket* packet, int size)
-{
-    if (size < (int)sizeof(NetCPacket))
-    {
-        return;
-    }
-    MpPacket* mp_packet = (MpPacket*)packet->payload;
-    NetClientId sender = packet->chead.sender;
-    switch (mp_packet->head.type)
-    {
-    case MPT_C_CONNECTION_REQUEST:
-    {
-        MpCPacketConnectionRequest* mpp =
-            (MpCPacketConnectionRequest*)mp_packet;
-
-        char buf[sizeof(MpSPacketConnectionResponse) + 255];
-        MpSPacketConnectionResponse* mpcr = (MpSPacketConnectionResponse*)buf;
-        int map_name_size = strlen(server->map_name) + 1;
-        mpcr->head.type = MPT_S_CONNECTION_RESPONSE;
-        mpcr->server_info.map_name_len = map_name_size - 1;
-        strcpy(mpcr->server_info.map_name, server->map_name);
-        mem_copy(&mpcr->server_configuration, &server->configuration,
-                 sizeof(server->configuration));
-
-        net_server_send(server->ns, sender, (MpPacket*)mpcr,
-                        sizeof(MpSPacketConnectionResponse) + map_name_size, 1);
-        mem_set(&server->players[sender], 0, sizeof(server->players[sender]));
-        /* Store player name */
-        strncpy(
-            server->players[packet->chead.sender].mp_player.client_info.name,
-            mpp->name, mpp->name_len);
-        printf("store name: %s len: %d\n", mpp->name, mpp->name_len);
-        server->players[sender].is_online = true;
-        /* Notify other */
-        send_players_info_(server, NET_CLIENT_ID_ALL_BUT(sender));
-        break;
-    }
-    case MPT_C_PLAYERS_INFO_REQUEST:
-    {
-        send_players_info_(server, sender);
-        break;
-    }
-    case MPT_C_ACTOR_INFO:
-    {
-        MpCPacketActorInfo* mpp = (MpCPacketActorInfo*)(mp_packet);
-        /* Store actor info */
-        if (mpp->timestamp_ms >
-            server->players[sender].last_actor_info_timestamp_ms)
-        {
-            server->players[sender].last_actor_info_timestamp_ms =
-                mpp->timestamp_ms;
-            mem_copy(&server->players[sender].mp_player.actor_info,
-                     &mpp->mp_actor_info, sizeof(mpp->mp_actor_info));
-        }
-        break;
-    }
-    default:
-    {
-        break;
-    }
+            server->ns, destination, packet,
+            sizeof(*packet) + sizeof(packet->items[0]) * packet->num_items, 0);
     }
 }
 
@@ -158,17 +176,19 @@ MpServer* mp_server_create(unsigned short port, int max_clients)
     if (server)
     {
         mem_set(server, 0, sizeof(*server));
-        server->ns = net_server_create(port, max_clients, 5000, 5000);
+        server->ns = net_server_create(port, max_clients, MP_RECV_TIMEOUT_MS,
+                                       MP_SEND_TIMEOUT_MS);
         if (server->ns)
         {
-            strcpy(server->map_name, "maps\\Level_01.map");
-            server->players =
-                mem_alloc(sizeof(server->players[0]) * max_clients);
+            server->players = mem_alloc(sizeof(*server->players) * max_clients);
             if (server->players)
             {
-                server->configuration.actor_info_update_rate_ms =
-                    MP_ACTOR_INFO_UPDATE_RATE_MS;
-                server->prev_actors_info_updated_time_ms = time_get_ms();
+                mem_set(server->players, 0,
+                        sizeof(*server->players) * max_clients);
+                strcpy_s(server->server_configuration.map_name,
+                         MP_MAX_MAP_NAME_LEN, "maps\\Level_01.map");
+                server->server_configuration.actor_sync_update_rate_ms =
+                    MP_ACTOR_SYNC_UPDATE_RATE_MS;
                 return server;
             }
             net_server_destroy(server->ns);
@@ -186,28 +206,24 @@ void mp_server_destroy(MpServer* server)
         {
             net_server_destroy(server->ns);
         }
-        if (server->players)
-        {
-            mem_free(server->players);
-        }
         mem_free(server);
     }
 }
 
 void mp_server_tick(MpServer* server)
 {
-    net_server_tick(server->ns);
-    char buf[2048];
-    int size;
-    while ((size = net_server_dequeue_packet(server->ns, (NetCPacket*)buf)))
+    if (!server)
     {
-        on_recv_(server, (NetCPacket*)buf, size);
+        return;
     }
-    NetTime time = time_get_ms();
-    if ((time - server->prev_actors_info_updated_time_ms) >=
-        server->configuration.actor_info_update_rate_ms)
+    server->tick_time_ms = time_get_ms();
+    net_server_tick(server->ns);
+    process_received_packets_(server);
+
+    if ((server->tick_time_ms - server->prev_actors_sync_sent_time_ms) >=
+        server->server_configuration.actor_sync_update_rate_ms)
     {
-        send_actors_info_(server);
-        server->prev_actors_info_updated_time_ms = time;
+        send_actors_sync_(server);
+        server->prev_actors_sync_sent_time_ms = server->tick_time_ms;
     }
 }

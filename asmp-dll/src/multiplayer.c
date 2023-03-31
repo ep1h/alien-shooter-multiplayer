@@ -77,6 +77,8 @@ static Multiplayer* mp = 0;
 
 static const char mainmenu_file_[] = "maps\\asmp_mainmenu.men";
 
+static void on_actor_info_updated(MpClient* client, int id, MpActor* actor);
+
 static EntPlayer* get_local_layer_(void);
 static bool read_play_menu_(PlayMenu* out_play_menu);
 static bool parse_address_(const char* str, char* ip, uint16_t* port);
@@ -88,6 +90,41 @@ static int __thiscall EntPlayer__set_armed_weapon_hook(EntPlayer* this,
 static void state_play_menu_handler_(void);
 static void state_connected_handler_(void);
 static bool set_hooks_(void);
+
+
+static void on_actor_info_updated(MpClient* client, int id, MpActor* actor)
+{
+    (void)client;
+    if (!mp->clients[id].entity)
+    {
+        mp->clients[id].vid =
+            *game_get_game()->vids[VID_009_UNIT_PLAYER_MALE_LEGS];
+        mp->clients[id].entity = game_get_game()->__vftable->create_entity(
+            game_get_game(), 0, &mp->clients[id].vid, actor->x, actor->y,
+            actor->z, 0, 0);
+        /* Add weapons */
+        for (int j = 2; j <= 9; j++)
+        {
+            mp->clients[id].entity->__vftable->action(mp->clients[id].entity, 0,
+                                                      ACT_ADD_ITEM,
+                                                      (void*)(260 + j), 0, 0);
+        }
+    }
+    else
+    {
+        EntPlayer* entity = (EntPlayer*)mp->clients[id].entity;
+        Entity__move((Entity*)entity, 0, actor->x, actor->y, actor->z);
+        Entity__rotate((Entity*)entity, 0, actor->direction_legs);
+        if (entity->ent_unit.ent_object.entity.child)
+        {
+            Entity__rotate(((Entity*)entity)->child, 0, actor->direction_torso);
+        }
+        entity->ent_unit.ent_object.entity.velocity = actor->velocity;
+        EntPlayer__set_armed_weapon(entity, 0, actor->armed_weapon);
+    }
+    console_log("on_actor_info_updated: %d | %.2f %.2f\n", id, actor->x,
+                actor->y);
+}
 
 static EntPlayer* get_local_layer_(void)
 {
@@ -235,7 +272,7 @@ static int __thiscall EntPlayer__set_armed_weapon_hook(EntPlayer* this,
         MpPlayer* mp_player = mp_client_get_local_player(mp->client);
         if (mp_player)
         {
-            mp_player->actor_info.armed_weapon = weapon_slot_id;
+            mp_player->mp_actor.armed_weapon = weapon_slot_id;
         }
     }
     return result;
@@ -244,10 +281,24 @@ static int __thiscall EntPlayer__set_armed_weapon_hook(EntPlayer* this,
 static int __thiscall EntPlayer__action_hook(Entity* this, enEntAction action,
                                              void* a3, void* a4, void* a5)
 {
-    if (ECX == (Entity*)get_local_layer_() && action == ACT_COOR_ATTACK)
+    static float attack_x = 0.0f;
+    static float attack_y = 0.0f;
+
+    if (ECX == (Entity*)get_local_layer_())
     {
-        /* a3 = x */
-        /* a4 = y */
+        if (action == ACT_COOR_ATTACK)
+        {
+            attack_x = (float)(int)a3;
+            attack_y = (float)(int)a4;
+        }
+        else if (action == ACT_ADD_AMMO)
+        {
+            if ((int)a3 >= -2 && (int)a3 <= -1)
+            {
+                console_log("Send attack: %.2f %.2f\n", attack_x, attack_y);
+                // TODO: Send shoot here.
+            }
+        }
     }
     int result = EntPlayer__action_orig(ECX, EDX, action, a3, a4, a5);
     return result;
@@ -258,7 +309,7 @@ static void state_play_menu_handler_(void)
     PlayMenu play_menu = {0};
     if (!read_play_menu_(&play_menu))
     {
-        // TODO: Something defenitely wrong. Throw an error.
+        // TODO: Something definitely wrong. Throw an error.
         return;
     }
     StatePlayMenuSubstate substate = play_menu.status->entity.entity.health;
@@ -300,21 +351,22 @@ static void state_play_menu_handler_(void)
     case SPMS_CONNECTING:
     {
         MpClientState mcs = mp_client_get_state(mp->client);
-        if (mcs == MPS_CONNECTED)
+        if (mcs == MP_CLIENT_STATE_CONNECTED)
         {
             play_menu.status->entity.entity.health = substate;
-            mp->clients = mem_alloc(sizeof(*mp->clients) *
-                                    mp_client_get_max_players(mp->client));
+            mp->clients =
+                mem_alloc(sizeof(*mp->clients) *
+                          mp_client_get_max_players_number(mp->client));
             if (mp->clients)
             {
                 mem_set(mp->clients, 0,
                         sizeof(*mp->clients) *
-                            mp_client_get_max_players(mp->client));
+                            mp_client_get_max_players_number(mp->client));
                 substate = SPMS_CONNECTED;
                 mp->state = STATE_CONNECTED;
             }
         }
-        else if (mcs == MPS_CONNECTION_FAILED)
+        else if (mcs == MP_CLIENT_STATE_CONNECTION_FAILED)
         {
             substate = SPMS_CONNECTION_FAILED;
         }
@@ -346,7 +398,8 @@ static void state_connected_handler_(void)
     {
     case SCS_IDLE:
     {
-        const char* map_name = mp_client_get_map_name(mp->client);
+        const char* map_name =
+            mp_client_get_server_configuration(mp->client)->map_name;
         if (map_name && strlen(map_name))
         {
             Game__load_map(game_get_game(), 0, map_name);
@@ -356,8 +409,8 @@ static void state_connected_handler_(void)
     }
     case SCS_WAIT_LOAD_MAP:
     {
-        /* This intermediate state lasts one tick and is required for the game
-         * to load a map. */
+        /* This intermediate state lasts one tick and is required for the
+         * game to load a map. */
         mp->connected_substate = SCS_WAIT_SPAWN;
         break;
     }
@@ -379,66 +432,17 @@ static void state_connected_handler_(void)
             break;
         }
         /* Update local actor info in client structures */
-        Entity* local_player_entity = &local_player->ent_unit.ent_object.entity;
-        MpPlayer* mp_player_local = mp_client_get_local_player(mp->client);
-        mp_player_local->actor_info.x = local_player_entity->x;
-        mp_player_local->actor_info.y = local_player_entity->y;
-        mp_player_local->actor_info.z = local_player_entity->z;
-        mp_player_local->actor_info.velocity = local_player_entity->velocity;
-        mp_player_local->actor_info.direction_legs =
-            local_player_entity->direction;
-        mp_player_local->actor_info.direction_torso =
-            local_player_entity->child->direction;
-        mp_player_local->actor_info.health = local_player_entity->health;
-
-        /* Update remote actors info */
-        for (int i = 0; i < mp_client_get_max_players(mp->client); i++)
+        MpPlayer* mp_player = mp_client_get_local_player(mp->client);
+        if (mp_player)
         {
-            if (i == mp_client_get_local_player_id(mp->client))
-            {
-                continue;
-            }
-            const MpPlayer* p = mp_client_get_player(mp->client, i);
-            if (p)
-            {
-                if (!mp->clients[i].entity)
-                {
-                    mem_copy(
-                        &mp->clients[i].vid,
-                        game_get_game()->vids[VID_009_UNIT_PLAYER_MALE_LEGS],
-                        sizeof(Vid));
-                    mp->clients[i].entity =
-                        game_get_game()->__vftable->create_entity(
-                            game_get_game(), 0, &mp->clients[i].vid,
-                            p->actor_info.x, p->actor_info.y, p->actor_info.z,
-                            0, 0);
-                    if (mp->clients[i].entity)
-                    {
-                        /* Add weapons */
-                        for (int j = 2; j <= 9; j++)
-                        {
-                            mp->clients[i].entity->__vftable->action(
-                                mp->clients[i].entity, 0, ACT_ADD_ITEM,
-                                (void*)(260 + j), 0, 0);
-                        }
-                    }
-                }
-                if (!mp->clients[i].entity || !mp->clients[i].entity->child)
-                {
-                    continue;
-                }
-                Entity__move(mp->clients[i].entity, 0, p->actor_info.x,
-                             p->actor_info.y, p->actor_info.z);
-                mp->clients[i].entity->velocity = p->actor_info.velocity;
-                Entity__rotate(mp->clients[i].entity, 0,
-                               p->actor_info.direction_legs);
-                Entity__rotate(mp->clients[i].entity->child, 0,
-                               p->actor_info.direction_torso);
-                mp->clients[i].entity->velocity = p->actor_info.velocity;
-                mp->clients[i].entity->health = p->actor_info.health;
-                EntPlayer__set_armed_weapon((EntPlayer*)mp->clients[i].entity,
-                                            0, p->actor_info.armed_weapon);
-            }
+            mp_player->mp_actor.x = ((Entity*)(local_player))->x;
+            mp_player->mp_actor.y = ((Entity*)(local_player))->y;
+            mp_player->mp_actor.z = ((Entity*)(local_player))->z;
+            mp_player->mp_actor.velocity = ((Entity*)(local_player))->velocity;
+            mp_player->mp_actor.direction_legs =
+                ((Entity*)(local_player))->direction;
+            mp_player->mp_actor.direction_torso =
+                ((Entity*)(local_player))->child->direction;
         }
         break;
     }
@@ -496,6 +500,8 @@ Multiplayer* multiplayer_create(void)
             mp->client = mp_client_create();
             if (mp->client)
             {
+                mp_client_set_actor_sync_callback(mp->client,
+                                                  &on_actor_info_updated);
                 return mp;
             }
         }

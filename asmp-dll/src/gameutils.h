@@ -17,5 +17,6 @@
 
 typedef struct Entity Entity;
 Entity* gameutils_get_menu_item(enVid vid_idx, uint8_t direction);
+void gameutils_spawn_weapons(void);
 
 #endif /* GAMEUTILS_H */

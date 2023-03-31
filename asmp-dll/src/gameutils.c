@@ -5,7 +5,9 @@
  */
 #include "gameutils.h"
 #include "game/game.h"
+#include "game/types/Army.h"
 #include "game/types/entities/Entity.h"
+#include "game/types/entities/EntPlayer.h"
 #include "game/types/List.h"
 #include "game/types/vids/Vid.h"
 
@@ -26,4 +28,30 @@ Entity* gameutils_get_menu_item(enVid vid_idx, uint8_t direction)
         }
     }
     return 0;
+}
+
+void gameutils_spawn_weapons(void)
+{
+    Game* g = game_get_game();
+    if (g)
+    {
+        Army* a = g->army[g->mb_flagman_army];
+        if (a)
+        {
+            Entity* p = (Entity*)a->player;
+            if (p)
+            {
+                float x = p->x;
+                float y = p->y;
+                float z = p->z;
+                x += 100.0f;
+                for (int i = 262; i <= 269; i++)
+                {
+                    g->__vftable->create_entity(g, 0, g->vids[i], x, y, z, 0,
+                                                0);
+                    x += 50.0f;
+                }
+            }
+        }
+    }
 }

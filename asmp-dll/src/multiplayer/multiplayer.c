@@ -11,7 +11,7 @@
 #include "gameutils.h"
 #include "game/types/entities/EntText.h"
 #include "game/types/vids/Vid.h"
-#include "client/client.h"
+#include "multiplayer/client/client.h"
 
 #define STATUSBAR_NDIR     0
 #define NAME_TEXT_NDIR     2

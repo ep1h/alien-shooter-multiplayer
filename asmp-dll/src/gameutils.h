@@ -15,8 +15,13 @@
 #include <stdint.h>
 #include "game/types/enums.h"
 
+typedef struct EntPlayer EntPlayer;
 typedef struct Entity Entity;
+typedef struct Vid Vid;
+
 Entity* gameutils_get_menu_item(enVid vid_idx, uint8_t direction);
 void gameutils_spawn_weapons(void);
+EntPlayer* gameutils_get_player(void);
+Entity* gameutils_create_entity(Vid* vid, float x, float y, float z);
 
 #endif /* GAMEUTILS_H */

@@ -11,7 +11,7 @@
 #include "gameutils.h"
 
 static HINSTANCE instance_handle = 0;
-static Multiplayer* multiplayer_ = 0;
+
 
 /**
  * @brief Entry point into a DLL.
@@ -57,8 +57,7 @@ static bool dllmain_init(void)
     {
         if (hook_init())
         {
-            multiplayer_ = multiplayer_create();
-            if (multiplayer_)
+            if (multiplayer_init())
             {
                 return true;
             }
@@ -71,7 +70,7 @@ static bool dllmain_init(void)
 
 static void dllmain_destroy(void)
 {
-    multiplayer_destroy(multiplayer_);
+    multiplayer_destroy();
     hook_destroy();
     console_destroy();
 }

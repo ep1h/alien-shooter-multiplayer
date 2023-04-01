@@ -11,6 +11,8 @@ Alien Shooter is a singleplayer isometric top-down shooter released in 2003. The
 ## Repository navigation
 - [/asmp-dll](/asmp-dll) - client source code. The client is a .dll library, the injection of which into the game process changes the game logic so that it becomes possible to play over the network.
   - [/asmp-dll/src/game](/asmp-dll/src/game) - data types, addresses of functions and global objects obtained as a result of reverse engineering. There is almost no executing logic in this directory.
+  - [/asmp-dll/src/multiplayer](/asmp-dll/src/multiplayer) - top-level client implementation and multiplayer logic.
+    - [/asmp-dll/src/multiplayer/client](/asmp-dll/src/multiplayer/client) - top-level client implementation.
   - [/asmp-dll/src/dllmain.c](/asmp-dll/src/dllmain.c) - entry point. Everything starts here.
   - [/asmp-dll/src/utils/hook](/asmp-dll/src/utils/hook) - component for functions hooking.
 - [/asmp-server](/asmp-server) - server source code. The server is a 32-bit Windows executable file.

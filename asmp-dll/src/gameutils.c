@@ -55,3 +55,27 @@ void gameutils_spawn_weapons(void)
         }
     }
 }
+
+EntPlayer* gameutils_get_player(void)
+{
+    Game* g = game_get_game();
+    if (g)
+    {
+        Army* a = g->army[g->mb_flagman_army];
+        if (a)
+        {
+            return a->player;
+        }
+    }
+    return 0;
+}
+
+Entity* gameutils_create_entity(Vid* vid, float x, float y, float z)
+{
+    Game* g = game_get_game();
+    if (g)
+    {
+        return g->__vftable->create_entity(g, 0, vid, x, y, z, 0, 0);
+    }
+    return 0;
+}

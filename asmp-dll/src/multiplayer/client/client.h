@@ -79,6 +79,26 @@ void mp_client_set_actor_sync_callback(MpClient* client,
                                                         MpActor* actor));
 
 /**
+ * @brief Sets callback that will be called when actor shoot packet received.
+ * 
+ * @param client   Pointer to client instance.
+ * @param callback Callback function pointer.
+ */
+void mp_client_set_actor_shoot_callback(MpClient* client,
+                                        void (*callback)(MpClient* client,
+                                                         int id, float x,
+                                                         float y));
+
+/**
+ * @brief Sends packet about shooting to coordinates.
+ * 
+ * @param client Pointer to client instance.
+ * @param x      X coordinate.
+ * @param y      Y coordinate.
+ */
+void mp_client_send_shoot(MpClient* client, float x, float y);
+
+/**
  * @brief Returns current client state.
  *
  * @param client Pointer to client instance.

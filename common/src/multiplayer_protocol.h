@@ -85,4 +85,21 @@ typedef struct MpSPacketActorsSync
     MpSPacketActorSyncItem items[];
 } MpSPacketActorsSync;
 
+typedef struct MpCPacketShoot
+{
+    MpPacketHead head;
+    // TODO: Add weapon id for additional syncing?
+    float x;
+    float y;
+} MpCPacketShoot;
+
+typedef struct MpSPacketShoot
+{
+    MpPacketHead head;
+    uint8_t player_id;
+    // TODO: Add weapon id for additional syncing?
+    float x;
+    float y;
+} MpSPacketShoot;
+
 #endif /* MULTIPLAYER_PROTOCOL */

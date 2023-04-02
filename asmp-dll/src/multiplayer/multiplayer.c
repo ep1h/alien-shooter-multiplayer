@@ -163,6 +163,16 @@ static int __thiscall EntPlayer__action_hook_(Entity* this, enEntAction action,
 static void on_actor_info_updated(MpClient* client, int id, MpActor* actor);
 
 /**
+ * @brief Calls each time when remote player's shoot packet is received.
+ *
+ * @param client Pointer to MpClient object.
+ * @param id     Id of remote player.
+ * @param x      X coordinate of shoot.
+ * @param y      Y coordinate of shoot.
+ */
+static void on_actor_shoot(MpClient* client, int id, float x, float y);
+
+/**
  * @brief Sets all necessary hooks.
  *
  * @return true If all hooks were set successfully.
@@ -263,6 +273,23 @@ static int __thiscall EntPlayer__set_armed_weapon_hook_(EntPlayer* this,
 static int __thiscall EntPlayer__action_hook_(Entity* this, enEntAction action,
                                               void* a3, void* a4, void* a5)
 {
+    static float attack_x = 0.0f;
+    static float attack_y = 0.0f;
+    if (ECX == (Entity*)gameutils_get_player())
+    {
+        if (action == ACT_COOR_ATTACK)
+        {
+            attack_x = (float)(int)a3;
+            attack_y = (float)(int)a4;
+        }
+        else if (action == ACT_ADD_AMMO)
+        {
+            if ((int)a3 <= -1 && (int)a3 >= -2)
+            {
+                mp_client_send_shoot(mp_->mp_client, attack_x, attack_y);
+            }
+        }
+    }
     return ((Entity__action_t)FUNC_ENT_PLAYER_ACTION)(ECX, EDX, action, a3, a4,
                                                       a5);
 }
@@ -272,6 +299,27 @@ static void on_actor_info_updated(MpClient* client, int id, MpActor* actor)
     (void)client;
     mp_->remote_players[id].mp_player.mp_actor = *actor;
     mp_->remote_players[id].is_actor_info_changed = true;
+}
+
+static void on_actor_shoot(MpClient* client, int id, float x, float y)
+{
+    (void)client;
+    if (mp_->remote_players[id].state == RPS_SPAWNED)
+    {
+        if (!((Entity*)mp_->remote_players[id].entity)
+                 ->__vftable->action((Entity*)mp_->remote_players[id].entity, 0,
+                                     ACT_GET_AMMO, 0, 0, 0))
+        {
+            ((Entity*)mp_->remote_players[id].entity)
+                ->__vftable->action((Entity*)mp_->remote_players[id].entity, 0,
+                                    ACT_ADD_AMMO, (void*)999999, 0, 0);
+        }
+
+        ((Entity*)mp_->remote_players[id].entity)
+            ->__vftable->action((Entity*)mp_->remote_players[id].entity, 0,
+                                ACT_COOR_ATTACK, (void*)(int)x, (void*)(int)y,
+                                0);
+    }
 }
 
 static bool set_hooks_(void)
@@ -660,6 +708,8 @@ bool multiplayer_init(void)
                 /* Set multiplayer client callbacks */
                 mp_client_set_actor_sync_callback(mp_->mp_client,
                                                   &on_actor_info_updated);
+                mp_client_set_actor_shoot_callback(mp_->mp_client,
+                                                   &on_actor_shoot);
                 if (set_hooks_())
                 {
                     return true;

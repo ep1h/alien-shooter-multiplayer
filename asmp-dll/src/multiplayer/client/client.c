@@ -27,6 +27,7 @@ typedef enum MpClientStateConnectedSubstate
 typedef struct Player
 {
     MpPlayer mp_player;
+    NetTime user_sync_updated_time_ms;
     NetTime actor_sync_updated_time_ms;
 } Player;
 
@@ -37,6 +38,7 @@ typedef struct MpClient
     NetTime tick_time_ms;
     MpServerConfiguration server_configuration;
     Player local_player;
+    void (*user_sync_callback)(MpClient* client, int id, MpUser* user);
     void (*actor_sync_callback)(MpClient* client, int id, MpActor* actor);
     void (*actor_shoot_callback)(MpClient* client, int id, float x, float y);
 } MpClient;
@@ -221,6 +223,18 @@ static void handle_state_connecting_(MpClient* client)
 static void handle_state_connected_(MpClient* client)
 {
     if ((client->tick_time_ms -
+         client->local_player.user_sync_updated_time_ms) >=
+        client->server_configuration.user_sync_update_rate_ms)
+    {
+        /* Send actual user info */
+        MpCPacketUserSync packet;
+        packet.head.type = MPT_C_USER_SYNC;
+        packet.mp_user = client->local_player.mp_player.mp_user;
+        net_client_send(client->nc, &packet, sizeof(packet), 0);
+        client->local_player.user_sync_updated_time_ms = client->tick_time_ms;
+    }
+
+    if ((client->tick_time_ms -
          client->local_player.actor_sync_updated_time_ms) >=
         client->server_configuration.actor_sync_update_rate_ms)
     {
@@ -253,6 +267,17 @@ static void process_received_packets_(MpClient* client)
         MpPacketHead* head = (MpPacketHead*)packet->payload;
         switch (head->type)
         {
+        case MPT_S_USERS_SYNC:
+        {
+            MpSPacketUsersSync* mp_packet =
+                (MpSPacketUsersSync*)packet->payload;
+            for (NetClientId i = 0; i < mp_packet->num_items; ++i)
+            {
+                client->user_sync_callback(client, mp_packet->items[i].id,
+                                           &mp_packet->items[i].mp_user);
+            }
+            break;
+        }
         case MPT_S_ACTORS_SYNC:
         {
             MpSPacketActorsSync* mp_packet =
@@ -391,6 +416,16 @@ void mp_client_disconnect(MpClient* client)
     net_client_disconnect(client->nc);
     // TODO: Clear players data.
     client->state = MP_CLIENT_STATE_INITED;
+}
+
+void mp_client_set_user_sync_callback(MpClient* client,
+                                      void (*callback)(MpClient* client, int id,
+                                                       MpUser* user))
+{
+    if (client)
+    {
+        client->user_sync_callback = callback;
+    }
 }
 
 void mp_client_set_actor_sync_callback(MpClient* client,

@@ -16,12 +16,11 @@
 #include "gameutils.h"
 #include "utils/console/console.h" // TODO: Remove later.
 
-
 #define STATUSBAR_NDIR     0
 #define NAME_TEXT_NDIR     2
 #define ADDRESS_TEXT_NDIR  3
 #define CONNECT_BUTTON_DIR 25 /* NDIR = 1 */
-
+#define NICKNAME_Y_OFFSET  -100.0f
 
 typedef enum MultiplayerState
 {
@@ -73,6 +72,8 @@ typedef struct RemotePlayer
     RemotePlayerState state;
     MpPlayer mp_player;
     EntPlayer* entity;
+    EntText* nickname_entity;
+    bool is_user_info_changed;
     bool is_actor_info_changed;
     Vid vid;
 } RemotePlayer;
@@ -158,6 +159,15 @@ static int __thiscall EntPlayer__set_armed_weapon_hook_(EntPlayer* this,
  */
 static int __thiscall EntPlayer__action_hook_(Entity* this, enEntAction action,
                                               void* a3, void* a4, void* a5);
+
+/**
+ * @brief Calls each time when remote player's user info is received.
+ *
+ * @param client Pointer to MpClient object.
+ * @param id     Id of remote player.
+ * @param user   Pointer to received user data.
+ */
+static void on_user_info_updated(MpClient* client, int id, MpUser* user);
 
 // TODO: Should be removed after refactoring.
 static void on_actor_info_updated(MpClient* client, int id, MpActor* actor);
@@ -258,13 +268,38 @@ static int __thiscall EntPlayer__set_armed_weapon_hook_(EntPlayer* this,
 {
     int result =
         mp_->EntPlayer__set_armed_weapon_trampoline(ECX, EDX, weapon_slot_id);
-    if (result && ECX == gameutils_get_player())
+    if (result)
     {
-        MpPlayer* mp_player = mp_client_get_local_player(mp_->mp_client);
-        if (mp_player)
+        if (ECX == gameutils_get_player())
         {
-            /* Update local player's armed weapon in client structure */
-            mp_player->mp_actor.armed_weapon = weapon_slot_id;
+            MpPlayer* mp_player = mp_client_get_local_player(mp_->mp_client);
+            if (mp_player)
+            {
+                /* Update local player's armed weapon in client structure */
+                mp_player->mp_actor.armed_weapon = weapon_slot_id;
+            }
+        }
+        else
+        {
+            /* After changing weapon, player's name entity attaches to weapon
+               entity. So, need to recalculate it's position. */
+            for (int i = 0;
+                 i < mp_client_get_max_players_number(mp_->mp_client); i++)
+            {
+                if (ECX && (mp_->remote_players[i].entity == ECX))
+                {
+                    if (mp_->remote_players[i].nickname_entity)
+                    {
+                        mp_->remote_players[i]
+                            .nickname_entity->entity.entity.x =
+                            ((Entity*)ECX)->x;
+                        mp_->remote_players[i]
+                            .nickname_entity->entity.entity.y =
+                            ((Entity*)ECX)->y + NICKNAME_Y_OFFSET;
+                        break;
+                    }
+                }
+            }
         }
     }
     return result;
@@ -292,6 +327,17 @@ static int __thiscall EntPlayer__action_hook_(Entity* this, enEntAction action,
     }
     return ((Entity__action_t)FUNC_ENT_PLAYER_ACTION)(ECX, EDX, action, a3, a4,
                                                       a5);
+}
+
+static void on_user_info_updated(MpClient* client, int id, MpUser* user)
+{
+    (void)client;
+    mp_->remote_players[id].mp_player.mp_user = *user;
+    if (strcmp(user->name, mp_->remote_players[id].mp_player.mp_user.name) != 0)
+    {
+        strcpy(mp_->remote_players[id].mp_player.mp_user.name, user->name);
+        mp_->remote_players[id].is_user_info_changed = true;
+    }
 }
 
 static void on_actor_info_updated(MpClient* client, int id, MpActor* actor)
@@ -618,32 +664,30 @@ static void handle_remote_players_(void)
 {
     for (int i = 0; i < mp_client_get_max_players_number(mp_->mp_client); i++)
     {
+        /* Handle user-related changes */
+
+        /* Handle actor-related changes */
         // TOOD: Add if-connected check.
         RemotePlayer* rp = &mp_->remote_players[i];
-        if (!rp->is_actor_info_changed)
-        {
-            continue;
-        }
         switch (rp->state)
         {
         case RPS_NOT_SPAWNED:
         {
-            console_log("RPS_NOT_SPAWNED for %d\n", i);
-
-            /* Create remote player entity */
-            /* Copy default player vid */
-            rp->vid = *game_get_game()->vids[VID_009_UNIT_PLAYER_MALE_LEGS];
-            /* Create entity */
-            rp->entity = (EntPlayer*)gameutils_create_entity(
-                &rp->vid, // game_get_game()->vids[VID_009_UNIT_PLAYER_MALE_LEGS],
-                rp->mp_player.mp_actor.x, rp->mp_player.mp_actor.y,
-                rp->mp_player.mp_actor.z);
-            rp->state = RPS_SPAWNING;
+            if (rp->is_actor_info_changed)
+            {
+                /* Create remote player entity */
+                /* Copy default player vid */
+                rp->vid = *game_get_game()->vids[VID_009_UNIT_PLAYER_MALE_LEGS];
+                /* Create entity */
+                rp->entity = (EntPlayer*)gameutils_create_entity(
+                    &rp->vid, rp->mp_player.mp_actor.x,
+                    rp->mp_player.mp_actor.y, rp->mp_player.mp_actor.z);
+                rp->state = RPS_SPAWNING;
+            }
             break;
         }
         case RPS_SPAWNING:
         {
-            console_log("RPS_SPAWNING for %d\n", i);
             /* Just wait for entity (its legs and torso) to be spawned */
             if (rp->entity && rp->entity->ent_unit.ent_object.entity.child)
             {
@@ -654,11 +698,8 @@ static void handle_remote_players_(void)
         case RPS_JUST_SPAWNED:
         {
             /* Load (prepare) all weapons for this player */
-            console_log("add weapons: ");
             for (int j = 2; j <= 9; j++)
             {
-                console_log("%d ", j);
-
                 if (!((Entity*)rp->entity)
                          ->__vftable->action(
                              (Entity*)rp->entity, 0, ACT_HAVE_ITEM,
@@ -671,24 +712,45 @@ static void handle_remote_players_(void)
                             (void*)(VID_260_OBJECT_UNK_MB_ALIEN_GUN + j), 0, 0);
                 }
             }
-            console_log("\n");
-
+            /* Create entity with player's name text */
+            rp->nickname_entity =
+                (EntText*)game_get_game()->__vftable->create_entity(
+                    game_get_game(), 0,
+                    game_get_game()->vids[VID_004_MENU_FONT_SMALL],
+                    ((Entity*)rp->entity)->x, ((Entity*)rp->entity)->y,
+                    ((Entity*)rp->entity)->z, 0, rp->entity);
+            ((Entity*)rp->nickname_entity)->x = ((Entity*)rp->entity)->x;
+            ((Entity*)rp->nickname_entity)->y =
+                ((Entity*)rp->entity)->y + NICKNAME_Y_OFFSET;
+            ((Entity*)rp->nickname_entity)->z = ((Entity*)rp->entity)->z;
+            rp->nickname_entity->text_70 = rp->mp_player.mp_user.name;
+            rp->nickname_entity->entity.entity.vid->field_40 = 0.0f;
+            Entity__add_child_end((Entity*)rp->entity, 0,
+                                  (Entity*)rp->nickname_entity);
+            /* Remove text entity from list_menu to make game to apply camera
+               position to it */
+            List__remove_item_by_ptr((List*)&game_get_game()->list_menu, 0,
+                                     (Entity*)rp->nickname_entity);
             rp->state = RPS_SPAWNED;
             break;
         }
         case RPS_SPAWNED:
         {
-            const MpActor* actor = &rp->mp_player.mp_actor;
-            Entity__move((Entity*)rp->entity, 0, actor->x, actor->y, actor->z);
-            Entity__rotate((Entity*)rp->entity, 0, actor->direction_legs);
-            if (((Entity*)rp->entity)->child)
+            if (rp->is_actor_info_changed)
             {
-                Entity__rotate(((Entity*)rp->entity)->child, 0,
-                               actor->direction_torso);
+                const MpActor* actor = &rp->mp_player.mp_actor;
+                Entity__move((Entity*)rp->entity, 0, actor->x, actor->y,
+                             actor->z);
+                Entity__rotate((Entity*)rp->entity, 0, actor->direction_legs);
+                if (((Entity*)rp->entity)->child)
+                {
+                    Entity__rotate(((Entity*)rp->entity)->child, 0,
+                                   actor->direction_torso);
+                }
+                ((Entity*)rp->entity)->velocity = actor->velocity;
+                EntPlayer__set_armed_weapon(rp->entity, 0, actor->armed_weapon);
+                rp->is_actor_info_changed = false;
             }
-            ((Entity*)rp->entity)->velocity = actor->velocity;
-            EntPlayer__set_armed_weapon(rp->entity, 0, actor->armed_weapon);
-            rp->is_actor_info_changed = false;
             break;
         }
         }
@@ -706,6 +768,8 @@ bool multiplayer_init(void)
             if (mp_->mp_client)
             {
                 /* Set multiplayer client callbacks */
+                mp_client_set_user_sync_callback(mp_->mp_client,
+                                                 &on_user_info_updated);
                 mp_client_set_actor_sync_callback(mp_->mp_client,
                                                   &on_actor_info_updated);
                 mp_client_set_actor_shoot_callback(mp_->mp_client,

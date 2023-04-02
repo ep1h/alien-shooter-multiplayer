@@ -67,6 +67,16 @@ bool mp_client_connection_request(MpClient* client, const char* ip,
 void mp_client_disconnect(MpClient* client);
 
 /**
+ * @brief Sets callback that will be called when user info is received.
+ *
+ * @param client   Pointer to client instance.
+ * @param callback Callback function pointer.
+ */
+void mp_client_set_user_sync_callback(MpClient* client,
+                                      void (*callback)(MpClient* client, int id,
+                                                       MpUser* user));
+
+/**
  * @brief Sets callback that will be called when actor info of an actor is
  *        received from server.
  *
@@ -80,7 +90,7 @@ void mp_client_set_actor_sync_callback(MpClient* client,
 
 /**
  * @brief Sets callback that will be called when actor shoot packet received.
- * 
+ *
  * @param client   Pointer to client instance.
  * @param callback Callback function pointer.
  */
@@ -91,7 +101,7 @@ void mp_client_set_actor_shoot_callback(MpClient* client,
 
 /**
  * @brief Sends packet about shooting to coordinates.
- * 
+ *
  * @param client Pointer to client instance.
  * @param x      X coordinate.
  * @param y      Y coordinate.

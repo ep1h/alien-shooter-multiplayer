@@ -15,6 +15,7 @@ typedef struct Player
 {
     MpPlayer player;
     bool is_connected;
+    NetTime user_sync_updatd_time_ms;
     NetTime actor_sync_updated_time_ms;
 } Player;
 
@@ -24,6 +25,7 @@ typedef struct MpServer
     MpServerConfiguration server_configuration;
     NetTime tick_time_ms;
     Player* players;
+    NetTime prev_users_sync_sent_time_ms;
     NetTime prev_actors_sync_sent_time_ms;
 } MpServer;
 
@@ -44,6 +46,15 @@ static void process_connection_request_(MpServer* server, NetClientId sender,
  * @param server A pointer to server instance.
  */
 static void process_received_packets_(MpServer* server);
+
+
+/**
+ * @brief Builds and sends users sync packets to all connected clients.
+ *
+ * @param server A pointer to server instance.
+ * Each client will receive user data about other connected clients.
+ */
+static void send_users_sync_(MpServer* server);
 
 /**
  * @brief Builds and sends actors sync packets to all connected clients.
@@ -94,6 +105,15 @@ static void process_received_packets_(MpServer* server)
                 (MpCPacketConnectionRequest*)packet->payload);
             break;
         }
+        case MPT_C_USER_SYNC:
+        {
+            /* Update user in server struct */
+            server->players[packet->chead.sender].player.mp_user =
+                ((MpCPacketUserSync*)packet->payload)->mp_user;
+            server->players[packet->chead.sender].user_sync_updatd_time_ms =
+                server->tick_time_ms;
+            break;
+        }
         case MPT_C_ACTOR_SYNC:
         {
             // printf("MPT_C_ACTOR_SYNC from %d | %.2f %.2f\n",
@@ -125,6 +145,60 @@ static void process_received_packets_(MpServer* server)
             break;
         }
         }
+    }
+}
+static void send_users_sync_(MpServer* server)
+{
+    uint8_t buf[1024]; // TODO: Use precalculated size.
+    MpSPacketUsersSync* packet = (MpSPacketUsersSync*)buf;
+    packet->head.type = MPT_S_USERS_SYNC;
+
+
+    for (NetClientId destination = 0;
+         destination < net_server_get_info(server->ns)->max_clients;
+         destination++)
+    {
+        /* Build actors info sync packet only for connected players */
+        if (!server->players[destination].is_connected)
+        {
+            continue;
+        }
+
+        /* Reset num_items for the player */
+        packet->num_items = 0;
+
+        /* Build actors sync packet for player with 'destination' id */
+        for (NetClientId i = 0;
+             i < net_server_get_info(server->ns)->max_clients; i++)
+        {
+            /* Ignore disconnected players */
+            if (!server->players[i].is_connected)
+            {
+                continue;
+            }
+            /* Ignore player who will receive this packet */
+            if (i == destination)
+            {
+                continue;
+            }
+            /* Ignore players who did not send user sync yet */
+            if (server->players[i].user_sync_updatd_time_ms == 0)
+            {
+                continue;
+            }
+            // TODO: Ignore players who did not send user sync for a long
+            //       time.
+
+            /* Add player's actor info to packet */
+            packet->items[packet->num_items].id = i;
+            packet->items[packet->num_items].mp_user =
+                server->players[i].player.mp_user;
+            packet->num_items++;
+        }
+        /* Send the packet */
+        net_server_send(
+            server->ns, destination, packet,
+            sizeof(*packet) + sizeof(packet->items[0]) * packet->num_items, 0);
     }
 }
 
@@ -200,6 +274,8 @@ MpServer* mp_server_create(unsigned short port, int max_clients)
                         sizeof(*server->players) * max_clients);
                 strcpy_s(server->server_configuration.map_name,
                          MP_MAX_MAP_NAME_LEN, "maps\\Level_01.map");
+                server->server_configuration.user_sync_update_rate_ms =
+                    MP_USER_SYNC_UPDATE_RATE_MS;
                 server->server_configuration.actor_sync_update_rate_ms =
                     MP_ACTOR_SYNC_UPDATE_RATE_MS;
                 return server;
@@ -232,6 +308,13 @@ void mp_server_tick(MpServer* server)
     server->tick_time_ms = time_get_ms();
     net_server_tick(server->ns);
     process_received_packets_(server);
+
+    if ((server->tick_time_ms - server->prev_users_sync_sent_time_ms) >=
+        server->server_configuration.user_sync_update_rate_ms)
+    {
+        send_users_sync_(server);
+        server->prev_users_sync_sent_time_ms = server->tick_time_ms;
+    }
 
     if ((server->tick_time_ms - server->prev_actors_sync_sent_time_ms) >=
         server->server_configuration.actor_sync_update_rate_ms)

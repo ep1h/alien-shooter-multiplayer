@@ -342,6 +342,34 @@ static int __thiscall EntPlayer__action_hook_(Entity* this, enEntAction action,
 
 static void __thiscall Entity__set_anim_hook_(Entity* this, enAnim anim_id)
 {
+    if ((mp_->state_connected_substate == SCS_PLAY))
+    {
+        if ((anim_id == ANI_DEATH) || (anim_id == ANI_DEATH2))
+        {
+            if (ECX == (Entity*)gameutils_get_player())
+            {
+                // TODO: Implement local player death logic here.
+                //       For now the code just prevents player from dying.
+                anim_id = ANI_STAND;
+                ECX->health = 110;
+            }
+            else
+            {
+                for (int i = 0;
+                     i < mp_client_get_max_players_number(mp_->mp_client); i++)
+                {
+                    if (ECX && (ECX == (Entity*)mp_->remote_players[i].entity))
+                    {
+                        // TODO: Implement rempote player death logic here.
+                        //       For now it just prevents player from dying.
+                        anim_id = ANI_STAND;
+                        ECX->health = 110;
+                        break;
+                    }
+                }
+            }
+        }
+    }
     return mp_->Entity__set_anim_trampoline(ECX, EDX, anim_id);
 }
 

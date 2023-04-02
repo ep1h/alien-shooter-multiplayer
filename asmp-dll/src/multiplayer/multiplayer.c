@@ -713,6 +713,11 @@ static void handle_remote_players_(void)
             /* Just wait for entity (its legs and torso) to be spawned */
             if (rp->entity && rp->entity->ent_unit.ent_object.entity.child)
             {
+                /* Enable FFA */
+                // TODO: FFA status should be received from server.
+                ((Entity*)rp->entity)
+                    ->__vftable->action((Entity*)rp->entity, 0, ACT_SET_ARMY,
+                                        (void*)1, 0, 0);
                 rp->state = RPS_JUST_SPAWNED;
             }
             break;

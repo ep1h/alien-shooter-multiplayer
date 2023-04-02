@@ -107,6 +107,19 @@ static void process_received_packets_(MpServer* server)
                 server->tick_time_ms;
             break;
         }
+        case MPT_C_SHOOT:
+        {
+            /* Build and send shoot packet to all other clients */
+            MpSPacketShoot msps;
+            msps.head.type = MPT_S_SHOOT;
+            msps.player_id = packet->chead.sender;
+            msps.x = ((MpCPacketShoot*)packet->payload)->x;
+            msps.y = ((MpCPacketShoot*)packet->payload)->y;
+            net_server_send(server->ns,
+                            NET_CLIENT_ID_ALL_BUT(packet->chead.sender), &msps,
+                            sizeof(msps), 100);
+            break;
+        }
         default:
         {
             break;

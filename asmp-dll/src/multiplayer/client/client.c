@@ -38,6 +38,7 @@ typedef struct MpClient
     MpServerConfiguration server_configuration;
     Player local_player;
     void (*actor_sync_callback)(MpClient* client, int id, MpActor* actor);
+    void (*actor_shoot_callback)(MpClient* client, int id, float x, float y);
 } MpClient;
 
 
@@ -267,6 +268,15 @@ static void process_received_packets_(MpClient* client)
                 //             mp_packet->items[i].mp_actor.x,
                 //             mp_packet->items[i].mp_actor.y);
             }
+            break;
+        }
+        case MPT_S_SHOOT:
+        {
+            client->actor_shoot_callback(
+                client, ((MpSPacketShoot*)packet->payload)->player_id,
+                ((MpSPacketShoot*)packet->payload)->x,
+                ((MpSPacketShoot*)packet->payload)->y);
+            break;
         }
         default:
         {
@@ -390,6 +400,29 @@ void mp_client_set_actor_sync_callback(MpClient* client,
     if (client)
     {
         client->actor_sync_callback = callback;
+    }
+}
+
+void mp_client_set_actor_shoot_callback(MpClient* client,
+                                        void (*callback)(MpClient* client,
+                                                         int id, float x,
+                                                         float y))
+{
+    if (client)
+    {
+        client->actor_shoot_callback = callback;
+    }
+}
+
+void mp_client_send_shoot(MpClient* client, float x, float y)
+{
+    if (client)
+    {
+        MpCPacketShoot packet;
+        packet.head.type = MPT_C_SHOOT;
+        packet.x = x;
+        packet.y = y;
+        net_client_send(client->nc, &packet, sizeof(packet), 100);
     }
 }
 

@@ -86,6 +86,7 @@ typedef struct Multiplayer
     RemotePlayer* remote_players;
     load_menu_t Game__load_menu_trampoline;
     EntPlayer__set_armed_weapon_t EntPlayer__set_armed_weapon_trampoline;
+    Entity__set_anim_t Entity__set_anim_trampoline;
 } Multiplayer;
 
 
@@ -159,6 +160,16 @@ static int __thiscall EntPlayer__set_armed_weapon_hook_(EntPlayer* this,
  */
 static int __thiscall EntPlayer__action_hook_(Entity* this, enEntAction action,
                                               void* a3, void* a4, void* a5);
+
+/**
+ * @brief Hook of EntPlayer::set_anim function.
+ *
+ * @param this    This is a macro. The macro expands to 2 arguments:
+ *                  ECX - pointer to entity who is calling this function.
+ *                  EDX - unused variable (actually this is EDX register value).
+ * @param anim_id New animation id.
+ */
+static void __thiscall Entity__set_anim_hook_(Entity* this, enAnim anim_id);
 
 /**
  * @brief Calls each time when remote player's user info is received.
@@ -329,6 +340,11 @@ static int __thiscall EntPlayer__action_hook_(Entity* this, enEntAction action,
                                                       a5);
 }
 
+static void __thiscall Entity__set_anim_hook_(Entity* this, enAnim anim_id)
+{
+    return mp_->Entity__set_anim_trampoline(ECX, EDX, anim_id);
+}
+
 static void on_user_info_updated(MpClient* client, int id, MpUser* user)
 {
     (void)client;
@@ -394,8 +410,14 @@ static bool set_hooks_(void)
                             (void**)&((Entity_vtbl*)ENT_PLAYER_VTBL)->action,
                             &EntPlayer__action_hook_))
                     {
-
-                        return true;
+                        mp_->Entity__set_anim_trampoline =
+                            hook_set((void*)FUNC_ENTITY_SET_ANIM,
+                                     Entity__set_anim_hook_, 8);
+                        /* Entity::set_anim hook */
+                        if (mp_->Entity__set_anim_trampoline)
+                        {
+                            return true;
+                        }
                     }
                 }
             }

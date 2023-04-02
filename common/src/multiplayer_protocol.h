@@ -7,7 +7,7 @@
 #define MP_MAX_MAP_NAME_LEN          24
 #define MP_RECV_TIMEOUT_MS           5000
 #define MP_SEND_TIMEOUT_MS           5000
-#define MP_ACTOR_SYNC_UPDATE_RATE_MS 250
+#define MP_ACTOR_SYNC_UPDATE_RATE_MS 30
 
 typedef struct MpServerConfiguration
 {

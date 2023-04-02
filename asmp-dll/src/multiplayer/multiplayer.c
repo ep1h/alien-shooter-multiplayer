@@ -143,6 +143,22 @@ static int __thiscall Game__tick_hook_(Game* this);
 static int __thiscall EntPlayer__set_armed_weapon_hook_(EntPlayer* this,
                                                         int weapon_slot_id);
 
+/**
+ * @brief Hook of EntPlayer::action function.
+ *
+ * @param this   This is a macro. The macro expands to 2 arguments:
+ *               ECX - pointer to entity who is calling this function.
+ *               EDX - unused variable (actually this is EDX register value).
+ * @param action Action to perform.
+ * @param a3     Action param 1.
+ * @param a4     Action param 2.
+ * @param a5     Action param 3.
+ *
+ * @return int Result of call to original EntPlayer::action.
+ */
+static int __thiscall EntPlayer__action_hook_(Entity* this, enEntAction action,
+                                              void* a3, void* a4, void* a5);
+
 // TODO: Should be removed after refactoring.
 static void on_actor_info_updated(MpClient* client, int id, MpActor* actor);
 
@@ -244,6 +260,13 @@ static int __thiscall EntPlayer__set_armed_weapon_hook_(EntPlayer* this,
     return result;
 }
 
+static int __thiscall EntPlayer__action_hook_(Entity* this, enEntAction action,
+                                              void* a3, void* a4, void* a5)
+{
+    return ((Entity__action_t)FUNC_ENT_PLAYER_ACTION)(ECX, EDX, action, a3, a4,
+                                                      a5);
+}
+
 static void on_actor_info_updated(MpClient* client, int id, MpActor* actor)
 {
     (void)client;
@@ -272,7 +295,14 @@ static bool set_hooks_(void)
                              EntPlayer__set_armed_weapon_hook_, 5);
                 if (mp_->EntPlayer__set_armed_weapon_trampoline)
                 {
-                    return true;
+                    /* EntPlayer::action hook */
+                    if (hook_set_vmt(
+                            (void**)&((Entity_vtbl*)ENT_PLAYER_VTBL)->action,
+                            &EntPlayer__action_hook_))
+                    {
+
+                        return true;
+                    }
                 }
             }
         }
@@ -557,7 +587,7 @@ static void handle_remote_players_(void)
             rp->vid = *game_get_game()->vids[VID_009_UNIT_PLAYER_MALE_LEGS];
             /* Create entity */
             rp->entity = (EntPlayer*)gameutils_create_entity(
-                &rp->vid,//game_get_game()->vids[VID_009_UNIT_PLAYER_MALE_LEGS],
+                &rp->vid, // game_get_game()->vids[VID_009_UNIT_PLAYER_MALE_LEGS],
                 rp->mp_player.mp_actor.x, rp->mp_player.mp_actor.y,
                 rp->mp_player.mp_actor.z);
             rp->state = RPS_SPAWNING;

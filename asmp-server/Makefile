@@ -5,7 +5,7 @@ SRC_DIRS := src ../common/src
 CC:=i686-w64-mingw32-gcc
 CXX:=i686-w64-mingw32-g++
 LINKER := $(CXX)
-STATIC_LIBS := -lSynchronization -lws2_32
+STATIC_LIBS := -lws2_32
 # RELEASE
 CC_CMP_FLAGS_RELEASE := -O3 -Wall -Wextra -Werror
 CXX_CMP_FLAGS_RELEASE := $(CC_CMP_FLAGS_RELEASE)

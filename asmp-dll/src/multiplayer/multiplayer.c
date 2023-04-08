@@ -21,7 +21,7 @@
 #define NAME_TEXT_NDIR     2
 #define ADDRESS_TEXT_NDIR  3
 #define CONNECT_BUTTON_DIR 25 /* NDIR = 1 */
-#define NICKNAME_Y_OFFSET  -100.0f
+#define NICKNAME_Y_OFFSET  -92.0f
 
 #define HEALTHBAR_Y_OFFSET              -80.0f
 #define HEALTHBAR_WIDTH                 80.0f
@@ -30,6 +30,7 @@
 #define HEALTHBAR_BACKGROUND_COLOR_ARGB 0xFF000000
 #define HEALTHBAR_HEALTH_COLOR_ARGB     0xFFD33104
 
+#define NICKNAME_X_OFFSET (-HEALTHBAR_WIDTH / 2)
 
 typedef enum MultiplayerState
 {
@@ -329,7 +330,7 @@ static int __thiscall EntPlayer__set_armed_weapon_hook_(EntPlayer* this,
                     {
                         mp_->remote_players[i]
                             .nickname_entity->entity.entity.x =
-                            ((Entity*)ECX)->x;
+                            ((Entity*)ECX)->x + NICKNAME_X_OFFSET;
                         mp_->remote_players[i]
                             .nickname_entity->entity.entity.y =
                             ((Entity*)ECX)->y + NICKNAME_Y_OFFSET;
@@ -824,7 +825,8 @@ static void handle_remote_players_(void)
                     game_get_game()->vids[VID_004_MENU_FONT_SMALL],
                     ((Entity*)rp->entity)->x, ((Entity*)rp->entity)->y,
                     ((Entity*)rp->entity)->z, 0, rp->entity);
-            ((Entity*)rp->nickname_entity)->x = ((Entity*)rp->entity)->x;
+            ((Entity*)rp->nickname_entity)->x =
+                ((Entity*)rp->entity)->x + NICKNAME_X_OFFSET;
             ((Entity*)rp->nickname_entity)->y =
                 ((Entity*)rp->entity)->y + NICKNAME_Y_OFFSET;
             ((Entity*)rp->nickname_entity)->z = ((Entity*)rp->entity)->z;

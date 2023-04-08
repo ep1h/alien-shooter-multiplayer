@@ -733,6 +733,8 @@ static void handle_multiplayer_state_connected_(void)
                     ((Entity*)local_palyer)->direction;
                 mp_local_player->mp_actor.direction_torso =
                     ((Entity*)local_palyer)->child->direction;
+                mp_local_player->mp_actor.health =
+                    ((Entity*)local_palyer)->health;
             }
         }
         /* Reflect remote players changes in game */
@@ -837,6 +839,8 @@ static void handle_remote_players_(void)
                 ((Entity*)rp->entity)->velocity = actor->velocity;
                 EntPlayer__set_armed_weapon(rp->entity, 0, actor->armed_weapon);
                 rp->is_actor_info_changed = false;
+                Entity__set_health((Entity*)rp->entity, 0,
+                                   rp->mp_player.mp_actor.health);
             }
             break;
         }

@@ -26,6 +26,7 @@ typedef struct MpActor
     uint8_t direction_legs;
     uint8_t direction_torso;
     uint8_t armed_weapon;
+    uint8_t health;
 } MpActor;
 
 typedef struct MpUser

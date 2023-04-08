@@ -23,6 +23,14 @@
 #define CONNECT_BUTTON_DIR 25 /* NDIR = 1 */
 #define NICKNAME_Y_OFFSET  -100.0f
 
+#define HEALTHBAR_Y_OFFSET              -80.0f
+#define HEALTHBAR_WIDTH                 80.0f
+#define HEALTHBAR_HEIGHT                7.0f
+#define HEALTHBAR_BORDERS_COLOR_ARGB    0xFFADA698
+#define HEALTHBAR_BACKGROUND_COLOR_ARGB 0xFF000000
+#define HEALTHBAR_HEALTH_COLOR_ARGB     0xFFD33104
+
+
 typedef enum MultiplayerState
 {
     MULTIPLAYER_STATE_NONE,
@@ -248,6 +256,13 @@ static void handle_multiplayer_state_connected_(void);
  */
 static void handle_remote_players_(void);
 
+/**
+ * @brief Draws health bars above remote players. Should be called from
+ *        IDirect3DDevice8::EndScene hook.
+ */
+static void draw_health_bars_(void);
+
+
 static int __fastcall Game__wnd_proc_hook_(Game* this, HWND hwnd, uint32_t msg,
                                            uint32_t wparam, uint32_t lparam)
 {
@@ -390,6 +405,7 @@ static long __stdcall IDirect3DDevice8__end_scene_hook_(IDirect3DDevice8* dev)
 
     Render__draw_colored_rect(game_get_render(), 0, 40, 40, 45, 45, 0x77F04A9B);
     /* Draw health bars */
+    draw_health_bars_();
     return (
         (IDirect3DDevice8__end_scene_t)(mp_->IDirect3DDevice8__end_scene_orig))(
         dev);
@@ -844,6 +860,43 @@ static void handle_remote_players_(void)
             }
             break;
         }
+        }
+    }
+}
+
+static void draw_health_bars_(void)
+{
+    if (!mp_ || mp_->state_connected_substate != SCS_PLAY ||
+        !mp_->remote_players)
+    {
+        return;
+    }
+    for (int i = 0; i < mp_client_get_max_players_number(mp_->mp_client); i++)
+    {
+        if (mp_->remote_players[i].state == RPS_SPAWNED)
+        {
+            Entity* ent = (Entity*)mp_->remote_players[i].entity;
+            /* Calculate health bar position */
+            float x = ent->x - HEALTHBAR_WIDTH / 2;
+            float y = ent->y + HEALTHBAR_Y_OFFSET;
+            x -= game_get_game()->camera_x;
+            y -= game_get_game()->camera_y;
+            /* Calculate health bar value len */
+            uint8_t max_hp = 110; // TODO: Should be received from server.
+            float hp_len = mp_->remote_players[i].mp_player.mp_actor.health *
+                           (HEALTHBAR_WIDTH - 2) / max_hp;
+            /* Draw borders */
+            Render__draw_colored_rect(game_get_render(), 0, x, y,
+                                      x + HEALTHBAR_WIDTH, y + HEALTHBAR_HEIGHT,
+                                      HEALTHBAR_BORDERS_COLOR_ARGB);
+            /* Draw background */
+            Render__draw_colored_rect(
+                game_get_render(), 0, x + 1, y + 1, x + HEALTHBAR_WIDTH - 2,
+                y + HEALTHBAR_HEIGHT - 2, HEALTHBAR_BACKGROUND_COLOR_ARGB);
+            /* Draw value*/
+            Render__draw_colored_rect(game_get_render(), 0, x + 1, y + 1,
+                                      x + 1 + hp_len, y + HEALTHBAR_HEIGHT - 2,
+                                      HEALTHBAR_HEALTH_COLOR_ARGB);
         }
     }
 }

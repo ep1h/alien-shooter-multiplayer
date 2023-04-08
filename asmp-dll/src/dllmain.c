@@ -9,6 +9,8 @@
 #include "utils/hook/hook.h"
 #include "multiplayer.h"
 #include "gameutils.h"
+#include "game/api.h"
+
 
 static HINSTANCE instance_handle = 0;
 

@@ -9,11 +9,7 @@
 #include "client/client.h"
 #include "utils/mem/mem.h"
 #include "utils/hook/hook.h"
-#include "game/game.h"
-#include "game/addresses.h"
-#include "game/types/Render.h"
-#include "game/types/entities/EntText.h"
-#include "game/types/vids/Vid.h"
+#include "game/api.h"
 #include "gameutils.h"
 #include "utils/console/console.h" // TODO: Remove later.
 
@@ -404,7 +400,8 @@ static long __stdcall IDirect3DDevice8__end_scene_hook_(IDirect3DDevice8* dev)
 {
     typedef long(__stdcall * IDirect3DDevice8__end_scene_t)(IDirect3DDevice8*);
 
-    Render__draw_colored_rect(game_get_render(), 0, 40, 40, 45, 45, 0x77F04A9B);
+    Render__draw_colored_rect(game_globals_get_render(), 40, 40, 45, 45,
+                              0x77F04A9B);
     /* Draw health bars */
     draw_health_bars_();
     return (
@@ -454,7 +451,7 @@ static void on_actor_shoot(MpClient* client, int id, float x, float y)
 static bool set_hooks_(void)
 {
     /* Game::wndproc hook */
-    if (hook_set_vmt((void**)&game_get_game()->__vftable->wnd_proc,
+    if (hook_set_vmt((void**)&game_globals_get_game()->__vftable->wnd_proc,
                      Game__wnd_proc_hook_))
     {
         /* Game::load_menu hook */
@@ -463,7 +460,7 @@ static bool set_hooks_(void)
         if (mp_->Game__load_menu_trampoline)
         {
             /* Game::tick hook */
-            if (hook_set_vmt((void**)&game_get_game()->__vftable->tick,
+            if (hook_set_vmt((void**)&game_globals_get_game()->__vftable->tick,
                              Game__tick_hook_))
             {
                 /* EntPlayer::set_armed_weapon hook */
@@ -486,7 +483,7 @@ static bool set_hooks_(void)
                             /* IDirect3DDevice8::EndScene hook */
                             mp_->IDirect3DDevice8__end_scene_orig =
                                 hook_set_vmt(
-                                    *(void***)(game_get_render()
+                                    *(void***)(game_globals_get_render()
                                                    ->IDirect3DDevice8) +
                                         35,
                                     IDirect3DDevice8__end_scene_hook_);
@@ -600,8 +597,7 @@ static void handle_multiplayer_state_multiplayer_menu_(void)
             {
                 console_log("ok!\n");
                 /* Disable 'CONNECT' button */
-                Entity__set_anim(mp_menu.connect_button, 0,
-                                 ANI_MENUDISABLEDOWN);
+                Entity__set_anim(mp_menu.connect_button, ANI_MENUDISABLEDOWN);
                 // TODO: Disable edit boxes, player model buttons.
                 /* Switch substate to connecting */
                 substate = SPMS_CONNECTING;
@@ -667,7 +663,7 @@ static void handle_multiplayer_state_multiplayer_menu_(void)
     {
         console_log("SPMS_CONNECTION_FAILED\n");
         /* Enable 'CONNECT' button */
-        Entity__set_anim(mp_menu.connect_button, 0, ANI_STAND);
+        Entity__set_anim(mp_menu.connect_button, ANI_STAND);
         substate = SPMS_IDLE;
         break;
     }
@@ -697,7 +693,7 @@ static void handle_multiplayer_state_connected_(void)
             mp_client_get_server_configuration(mp_->mp_client)->map_name;
         if (map_name && strlen(map_name))
         {
-            Game__load_map(game_get_game(), 0, map_name);
+            Game__load_map(game_globals_get_game(), map_name);
             mp_->state_connected_substate = SCS_WAIT_MAP_LOAD;
         }
         else
@@ -778,7 +774,8 @@ static void handle_remote_players_(void)
             {
                 /* Create remote player entity */
                 /* Copy default player vid */
-                rp->vid = *game_get_game()->vids[VID_009_UNIT_PLAYER_MALE_LEGS];
+                rp->vid = *game_globals_get_game()
+                               ->vids[VID_009_UNIT_PLAYER_MALE_LEGS];
                 /* Create entity */
                 rp->entity = (EntPlayer*)gameutils_create_entity(
                     &rp->vid, rp->mp_player.mp_actor.x,
@@ -820,9 +817,9 @@ static void handle_remote_players_(void)
             }
             /* Create entity with player's name text */
             rp->nickname_entity =
-                (EntText*)game_get_game()->__vftable->create_entity(
-                    game_get_game(), 0,
-                    game_get_game()->vids[VID_004_MENU_FONT_SMALL],
+                (EntText*)game_globals_get_game()->__vftable->create_entity(
+                    game_globals_get_game(), 0,
+                    game_globals_get_game()->vids[VID_004_MENU_FONT_SMALL],
                     ((Entity*)rp->entity)->x, ((Entity*)rp->entity)->y,
                     ((Entity*)rp->entity)->z, 0, rp->entity);
             ((Entity*)rp->nickname_entity)->x =
@@ -832,11 +829,11 @@ static void handle_remote_players_(void)
             ((Entity*)rp->nickname_entity)->z = ((Entity*)rp->entity)->z;
             rp->nickname_entity->text_70 = rp->mp_player.mp_user.name;
             rp->nickname_entity->entity.entity.vid->field_40 = 0.0f;
-            Entity__add_child_end((Entity*)rp->entity, 0,
+            Entity__add_child_end((Entity*)rp->entity,
                                   (Entity*)rp->nickname_entity);
             /* Remove text entity from list_menu to make game to apply camera
                position to it */
-            List__remove_item_by_ptr((List*)&game_get_game()->list_menu, 0,
+            List__remove_item_by_ptr((List*)&game_globals_get_game()->list_menu,
                                      (Entity*)rp->nickname_entity);
             rp->state = RPS_SPAWNED;
             break;
@@ -846,18 +843,17 @@ static void handle_remote_players_(void)
             if (rp->is_actor_info_changed)
             {
                 const MpActor* actor = &rp->mp_player.mp_actor;
-                Entity__move((Entity*)rp->entity, 0, actor->x, actor->y,
-                             actor->z);
-                Entity__rotate((Entity*)rp->entity, 0, actor->direction_legs);
+                Entity__move((Entity*)rp->entity, actor->x, actor->y, actor->z);
+                Entity__rotate((Entity*)rp->entity, actor->direction_legs);
                 if (((Entity*)rp->entity)->child)
                 {
-                    Entity__rotate(((Entity*)rp->entity)->child, 0,
+                    Entity__rotate(((Entity*)rp->entity)->child,
                                    actor->direction_torso);
                 }
                 ((Entity*)rp->entity)->velocity = actor->velocity;
-                EntPlayer__set_armed_weapon(rp->entity, 0, actor->armed_weapon);
+                EntPlayer__set_armed_weapon(rp->entity, actor->armed_weapon);
                 rp->is_actor_info_changed = false;
-                Entity__set_health((Entity*)rp->entity, 0,
+                Entity__set_health((Entity*)rp->entity,
                                    rp->mp_player.mp_actor.health);
             }
             break;
@@ -881,22 +877,23 @@ static void draw_health_bars_(void)
             /* Calculate health bar position */
             float x = ent->x - HEALTHBAR_WIDTH / 2;
             float y = ent->y + HEALTHBAR_Y_OFFSET;
-            x -= game_get_game()->camera_x;
-            y -= game_get_game()->camera_y;
+            x -= game_globals_get_game()->camera_x;
+            y -= game_globals_get_game()->camera_y;
             /* Calculate health bar value len */
             uint8_t max_hp = 110; // TODO: Should be received from server.
             float hp_len = mp_->remote_players[i].mp_player.mp_actor.health *
                            (HEALTHBAR_WIDTH - 2) / max_hp;
             /* Draw borders */
-            Render__draw_colored_rect(game_get_render(), 0, x, y,
+            Render__draw_colored_rect(game_globals_get_render(), x, y,
                                       x + HEALTHBAR_WIDTH, y + HEALTHBAR_HEIGHT,
                                       HEALTHBAR_BORDERS_COLOR_ARGB);
             /* Draw background */
-            Render__draw_colored_rect(
-                game_get_render(), 0, x + 1, y + 1, x + HEALTHBAR_WIDTH - 2,
-                y + HEALTHBAR_HEIGHT - 2, HEALTHBAR_BACKGROUND_COLOR_ARGB);
+            Render__draw_colored_rect(game_globals_get_render(), x + 1, y + 1,
+                                      x + HEALTHBAR_WIDTH - 2,
+                                      y + HEALTHBAR_HEIGHT - 2,
+                                      HEALTHBAR_BACKGROUND_COLOR_ARGB);
             /* Draw value*/
-            Render__draw_colored_rect(game_get_render(), 0, x + 1, y + 1,
+            Render__draw_colored_rect(game_globals_get_render(), x + 1, y + 1,
                                       x + 1 + hp_len, y + HEALTHBAR_HEIGHT - 2,
                                       HEALTHBAR_HEALTH_COLOR_ARGB);
         }

@@ -1,3 +1,8 @@
+/**
+ * @file List.h
+ * @brief Provides an API for interacting with game lists.
+ *
+ */
 #ifndef TYPES_LISTS_H
 #define TYPES_LISTS_H
 
@@ -39,5 +44,14 @@ typedef struct __cppobj PairedLists
     List first;
     List second;
 } PairedLists;
+
+/**
+ * @brief Removes item from list by pointer to that item.
+ *
+ * @param[in] ECX Pointer to list to remove item from.
+ * @param[in] ptr Pointer to item to remove.
+ */
+int List__remove_item_by_ptr(List* ECX, Entity* ptr);
+
 
 #endif /* TYPES_LISTS_H */

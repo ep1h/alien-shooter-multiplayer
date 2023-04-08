@@ -4,16 +4,10 @@
  *
  */
 #include "gameutils.h"
-#include "game/game.h"
-#include "game/types/Army.h"
-#include "game/types/entities/Entity.h"
-#include "game/types/entities/EntPlayer.h"
-#include "game/types/List.h"
-#include "game/types/vids/Vid.h"
 
 Entity* gameutils_get_menu_item(enVid vid_idx, uint8_t direction)
 {
-    Game* g = game_get_game();
+    Game* g = game_globals_get_game();
     if (g)
     {
         ListMenu* lm = &g->list_menu;
@@ -32,7 +26,7 @@ Entity* gameutils_get_menu_item(enVid vid_idx, uint8_t direction)
 
 void gameutils_spawn_weapons(void)
 {
-    Game* g = game_get_game();
+    Game* g = game_globals_get_game();
     if (g)
     {
         Army* a = g->army[g->mb_flagman_army];
@@ -58,7 +52,7 @@ void gameutils_spawn_weapons(void)
 
 EntPlayer* gameutils_get_player(void)
 {
-    Game* g = game_get_game();
+    Game* g = game_globals_get_game();
     if (g)
     {
         Army* a = g->army[g->mb_flagman_army];
@@ -72,7 +66,7 @@ EntPlayer* gameutils_get_player(void)
 
 Entity* gameutils_create_entity(Vid* vid, float x, float y, float z)
 {
-    Game* g = game_get_game();
+    Game* g = game_globals_get_game();
     if (g)
     {
         return g->__vftable->create_entity(g, 0, vid, x, y, z, 0, 0);

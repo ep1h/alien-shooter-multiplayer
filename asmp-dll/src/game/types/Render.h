@@ -1,7 +1,12 @@
+/**
+ * @file Render.h
+ * @brief Provides an API for interacting with the game's render system.
+ *
+ */
 #ifndef TYPES_RENDER_H
 #define TYPES_RENDER_H
 
-#include "common.h"
+#include <stdint.h>
 #include "enums.h"
 
 #ifndef IDirect3D8
@@ -11,6 +16,9 @@ typedef void* IDirect3D8;
 typedef void* IDirect3DDevice8;
 #endif /* IDirect3DDevice8 */
 
+/**
+ * @brief Structure that represents the game's render system.
+ */
 typedef struct Render
 {
     uint32_t unk_00[144];
@@ -48,11 +56,18 @@ typedef struct Render
     uint32_t field_E2C;
 } Render;
 
-typedef int(__thiscall* Render__set_environment_t)(Render* this,
-                                                   enEnvironment env);
-typedef float(__thiscall* Render__draw_colored_rect_t)(Render* this, float x1,
-                                                       float y1, float x2,
-                                                       float y2,
-                                                       uint32_t color_ARGB);
+/**
+ * @brief Draws a colored rectangle on the screen.
+ *
+ * @param[in] ECX Render instance pointer.
+ * @param[in] x1  x coordinate of the first point.
+ * @param[in] y1  y coordinate of the first point.
+ * @param[in] x2  x coordinate of the second point.
+ * @param[in] y2  y coordinate of the second point.
+ *
+ * @return unk
+ */
+float Render__draw_colored_rect(Render* ECX, float x1, float y1, float x2,
+                                float y2, uint32_t color_ARGB);
 
 #endif /* TYPES_RENDER_H */

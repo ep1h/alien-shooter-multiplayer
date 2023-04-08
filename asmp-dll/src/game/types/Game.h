@@ -1,3 +1,8 @@
+/**
+ * @file Game.h
+ * @brief Provides an API for interacting with the main game class.
+ *
+ */
 #ifndef TYPES_GAME_H
 #define TYPES_GAME_H
 
@@ -32,6 +37,9 @@ typedef int(__thiscall* Game__tick_t)(Game* this);
 typedef void(__thiscall* Game__load_map_t)(Game* this,
                                            const char* map_file_path);
 
+/**
+ * @brief Main game class.
+ */
 typedef struct __cppobj Game
 {
     Game_vtbl* __vftable /*VFT*/;
@@ -84,6 +92,9 @@ typedef struct __cppobj Game
     uint32_t field_22C0;
 } Game;
 
+/**
+ * @brief Virtual method table of the main game class.
+ */
 typedef struct Game_vtbl
 {
     Game__destroy_t destroy;
@@ -96,5 +107,13 @@ typedef struct Game_vtbl
     void* unk_07;
     Game__create_entity_t create_entity;
 } Game_vtbl;
+
+/**
+ * @brief Loads a map from a file.
+ *
+ * @param[in] ECX            Game instance pointer.
+ * @param[in] map_file_path  Map file path (relative to the game directory).
+ */
+void Game__load_map(Game* ECX, const char* map_file_path);
 
 #endif /* TYPES_GAME_H */

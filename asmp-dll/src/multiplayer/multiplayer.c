@@ -11,6 +11,7 @@
 #include "utils/hook/hook.h"
 #include "game/game.h"
 #include "game/addresses.h"
+#include "game/types/Render.h"
 #include "game/types/entities/EntText.h"
 #include "game/types/vids/Vid.h"
 #include "gameutils.h"
@@ -87,6 +88,7 @@ typedef struct Multiplayer
     load_menu_t Game__load_menu_trampoline;
     EntPlayer__set_armed_weapon_t EntPlayer__set_armed_weapon_trampoline;
     Entity__set_anim_t Entity__set_anim_trampoline;
+    void* IDirect3DDevice8__end_scene_orig;
 } Multiplayer;
 
 
@@ -170,6 +172,15 @@ static int __thiscall EntPlayer__action_hook_(Entity* this, enEntAction action,
  * @param anim_id New animation id.
  */
 static void __thiscall Entity__set_anim_hook_(Entity* this, enAnim anim_id);
+
+/**
+ * @brief Hook of IDirect3DDevice8::EndScene function.
+ *
+ * @param dev Pointer to IDirect3DDevice8 object.
+ *
+ * @return long Result of call to original IDirect3DDevice8::EndScene.
+ */
+static long __stdcall IDirect3DDevice8__end_scene_hook_(IDirect3DDevice8* dev);
 
 /**
  * @brief Calls each time when remote player's user info is received.
@@ -373,6 +384,17 @@ static void __thiscall Entity__set_anim_hook_(Entity* this, enAnim anim_id)
     return mp_->Entity__set_anim_trampoline(ECX, EDX, anim_id);
 }
 
+static long __stdcall IDirect3DDevice8__end_scene_hook_(IDirect3DDevice8* dev)
+{
+    typedef long(__stdcall * IDirect3DDevice8__end_scene_t)(IDirect3DDevice8*);
+
+    Render__draw_colored_rect(game_get_render(), 0, 40, 40, 45, 45, 0x77F04A9B);
+    /* Draw health bars */
+    return (
+        (IDirect3DDevice8__end_scene_t)(mp_->IDirect3DDevice8__end_scene_orig))(
+        dev);
+}
+
 static void on_user_info_updated(MpClient* client, int id, MpUser* user)
 {
     (void)client;
@@ -444,7 +466,17 @@ static bool set_hooks_(void)
                         /* Entity::set_anim hook */
                         if (mp_->Entity__set_anim_trampoline)
                         {
-                            return true;
+                            /* IDirect3DDevice8::EndScene hook */
+                            mp_->IDirect3DDevice8__end_scene_orig =
+                                hook_set_vmt(
+                                    *(void***)(game_get_render()
+                                                   ->IDirect3DDevice8) +
+                                        35,
+                                    IDirect3DDevice8__end_scene_hook_);
+                            if (mp_->IDirect3DDevice8__end_scene_orig)
+                            {
+                                return true;
+                            }
                         }
                     }
                 }

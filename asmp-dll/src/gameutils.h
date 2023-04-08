@@ -13,7 +13,7 @@
 #define GAMEUTILS_H
 
 #include <stdint.h>
-#include "game/types/enums.h"
+#include "game/api.h"
 
 typedef struct EntPlayer EntPlayer;
 typedef struct Entity Entity;

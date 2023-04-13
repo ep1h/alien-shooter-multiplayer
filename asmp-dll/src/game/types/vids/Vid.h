@@ -1,3 +1,8 @@
+/**
+ * @file Vid.h
+ * @brief Provides an API for interacting with vids.
+ *
+ */
 #ifndef VIDS_VID
 #define VIDS_VID
 
@@ -7,6 +12,27 @@
 typedef struct Vid Vid;
 typedef struct Vid_vtbl Vid_vtbl;
 typedef struct Entity Entity;
+
+typedef Vid*(__thiscall* Vid__set_hidden_t)(Vid* this, int value);
+typedef uint32_t(__thiscall* Vid__set_hp_coeff_army_t)(Vid* this, char army,
+                                                       int coeff);
+typedef Vid*(__thiscall* Vid__set_max_hp_army_t)(Vid* this, char army,
+                                                int maxhp);
+typedef uint32_t(__thiscall* Vid__is_hidden_t)(Vid* this);
+typedef int(__thiscall* Vid__get_ammo_t)(Vid* this);
+typedef uint32_t(__thiscall* Vid__get_max_hp_army_t)(Vid* this, char army_idx);
+typedef uint32_t(__thiscall* Vid__get_entities_number_army_t)(
+    Vid* this, int army_idx);
+typedef uint32_t(__thiscall* Vid__get_entities_number_total_t)(
+    Vid* this);
+typedef uint32_t(__thiscall* Vid__get_death_army_t)(Vid* this, int army_idx);
+typedef uint32_t(__thiscall* Vid__get_death_total_t)(Vid* this);
+typedef uint32_t(__thiscall* Vid__get_recolors_number_army_t)(Vid* this,
+                                                              char army_idx);
+typedef uint32_t(__thiscall* Vid__get_recolors_number_total_t)(Vid* this);
+typedef uint32_t(__thiscall* Vid__get_can_not_be_child_t)(Vid* this);
+typedef uint32_t(__thiscall* Vid__set_can_not_be_child_t)(Vid* this,
+                                                          uint32_t a2);
 
 typedef struct __cppobj Vid
 {
@@ -110,5 +136,125 @@ typedef struct Vid_vtbl
     void* unk_8;
     void* unk_9;
 } Vid_vtbl;
+
+/**
+ * @brief Sets the hidden flag for all vids linked to the given vid.
+ *
+ * @param[in] ECX   The vid to set the flag for.
+ * @param[in] value Zero to clear the flag, non-zero to set it.
+ *
+ * @return 0 if given Vid has no linked vid.
+ * @return 1 Otherwise.
+ */
+Vid* Vid__set_hidden(Vid* ECX, int value);
+
+/**
+ * @brief Sets healths change coefficient for all vids of a certain army.
+ *
+ * @param[in] ECX   A vid to set the coefficient for.
+ * @param[in] army  An army to set the coefficient for.
+ * @param[in] coeff A coefficient to set.
+ *
+ * @return unk // TODO: Reverse-engineer this.
+ */
+uint32_t Vid__set_hp_coeff_army(Vid* ECX, char army, int coeff);
+
+/**
+ * @brief Sets the maximum health for all vids of a certain army.
+ *
+ * @param[in] ECX   A vid to set the maximum health for.
+ * @param[in] army  An army to set the maximum health for.
+ * @param[in] maxhp A maximum health to set.
+ *
+ * @return unk // TODO: Reverse-engineer this.
+ */
+Vid* Vid__set_max_hp_army(Vid* ECX, char army, int maxhp);
+
+/**
+ * @brief Returns hidden flag for the given vid.
+ *
+ * @param[in] ECX The vid to get the flag for.
+ *
+ * @return 0 if the flag is not set.
+ * @return 1 if the flag is set.
+ */
+uint32_t Vid__is_hidden(Vid* ECX);
+
+// TODO: Reverse-engineer this.
+int Vid__get_ammo(Vid* ECX);
+
+/**
+ * @brief Returns the maximum health for all vids of a certain army.
+ *
+ * @param[in] ECX      A vid to get the maximum health for.
+ * @param[in] army_idx An army to get the maximum health for.
+ *
+ * @return The maximum health for all vids of a certain army.
+ */
+uint32_t Vid__get_max_hp_army(Vid* ECX, char army_idx);
+
+/**
+ * @brief Returns a number of created entities for a certain army.
+ *
+ * @param[in] ECX      A vid to get the number of created entities for.
+ * @param[in] army_idx An army to get the number of created entities for.
+ *
+ * @return A number of created entities for a certain army.
+ */
+uint32_t Vid__get_entities_number_army(Vid* ECX, int army_idx);
+
+/**
+ * @brief Returns a number of created entities for all armies.
+ *
+ * @param[in] ECX A vid to get the number of created entities for.
+ *
+ * @return A number of created entities with this vid for all armies.
+ */
+uint32_t Vid__get_entities_number_total(Vid* ECX);
+
+/**
+ * @brief Returns a number of deaths for a certain army.
+ *
+ * @param[in] ECX      A vid to get the number of deaths for.
+ * @param[in] army_idx An army to get the number of deaths for.
+ *
+ * @return A number of deaths for a certain army.
+ */
+uint32_t Vid__get_death_number_army(Vid* ECX, int army_idx);
+
+/**
+ * @brief Returns a number of deaths for all armies.
+ *
+ * @param[in] ECX A vid to get the number of deaths for.
+ *
+ * @return A number of deaths with this vid for all armies.
+ */
+uint32_t Vid__get_death_total(Vid* ECX);
+
+// TODO: Reverse-engineer this.
+uint32_t Vid__get_recolors_number_army(Vid* ECX, char army_idx);
+
+// TODO: Reverse-engineer this.
+uint32_t Vid__get_recolors_number_total(Vid* ECX);
+
+/**
+ * @brief Returns whether the given vid can be created as a child.
+ *
+ * @param[in] ECX The vid to check.
+ *
+ * @return 0 if the vid can be created as a child.
+ */
+uint32_t Vid__get_can_not_be_child(Vid* ECX);
+
+/**
+ * @brief Sets whether the given vid can be created as a child.
+ *
+ * @param[in] ECX The vid to set.
+ * @param[in] a2 zero to allow the vid to be created as a child, non-zero to
+ *            disallow.
+ *
+ * @return A value of the argument.
+ */
+uint32_t Vid__set_can_not_be_child(Vid* ECX, uint32_t a2);
 
 #endif /* VIDS_VID */

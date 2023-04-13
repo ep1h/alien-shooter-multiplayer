@@ -26,6 +26,20 @@ typedef struct __cppobj EntPlayer
 } EntPlayer;
 
 /**
+ * @brief Executes an action for a player entity.
+ *
+ * @param[in] ECX     Pointer to EntPlayer to execute action for.
+ * @param[in] action  Action to execute.
+ * @param[in] arg1    The first action argument.
+ * @param[in] arg2    The second action argument.
+ * @param[in] arg3    The third action argument.
+ *
+ * @return int Action execution result.
+ */
+int EntPlayer__action(Entity* ECX, enEntAction action, void* arg1, void* arg2,
+                      void* arg3);
+
+/**
  * @brief Sets currently used weapon slot id.
  *
  * @param[in] ECX            EntPlayer instance pointer.

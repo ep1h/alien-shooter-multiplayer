@@ -1,3 +1,9 @@
+/**
+ * @file Army.h
+ * @brief Provides an API for interacting with armies.
+ *
+ */
+
 #ifndef TYPES_ARMY_H
 #define TYPES_ARMY_H
 
@@ -8,6 +14,10 @@ typedef struct Army Army;
 typedef struct Army_vtbl Army_vtbl;
 typedef struct EntPlayer EntPlayer;
 
+typedef Army*(__thiscall* Army__destroy_t)(Army* this, int free);
+typedef uint32_t(__thiscall* Army__get_money_t)(Army* this);
+typedef uint32_t(__thiscall* Army__set_money_t)(Army* this, uint32_t money);
+typedef uint32_t(__thiscall* Army__set_clever_attack_t)(Army* this, int value);
 typedef EntPlayer*(__thiscall* Army__get_player_t)(Army* this);
 
 typedef struct __cppobj Army
@@ -44,5 +54,54 @@ typedef struct __cppobj Army_vtbl
     void(__thiscall* f7)(Army* __hidden this);
     void(__thiscall* f8)(Army* __hidden this);
 } Army_vtbl;
+
+
+/**
+ * @brief Destroys an army instance.
+ *
+ * @param[in] ECX   Army instance pointer.
+ * @param[in] free  Whether to free the memory allocated for the army.
+ * 
+ * @return Army* Pointer to destroyed army instance.
+ */
+Army* Army__destroy(Army* ECX, int free);
+
+/**
+ * @brief Gets army money.
+ *
+ * @param[in] ECX Army instance pointer.
+ *
+ * @return uint32_t Army money.
+ */
+uint32_t Army__get_money(Army* ECX);
+
+/**
+ * @brief Sets army money.
+ *
+ * @param[in] ECX   Army instance pointer.
+ * @param[in] money Army money.
+ *
+ * @return uint32_t Army money.
+ */
+uint32_t Army__set_money(Army* ECX, uint32_t money);
+
+/**
+ * @brief Sets army clever attack flag.
+ * 
+ * @param[in] ECX   Army instance pointer.
+ * @param[in] value Clever attack flag value.
+ * 
+ * @return unk. // TODO: Reverse-engineer this function.
+ */
+uint32_t Army__set_clever_attack(Army* ECX, int value);
+
+/**
+ * @brief Gets army flagman player entity.
+ *
+ * @param[in] ECX Army instance pointer.
+ *
+ * @return EntPlayer* Army flagman player entity.
+ */
+EntPlayer* Army__get_player(Army* ECX);
 
 #endif /* TYPES_ARMY_H */

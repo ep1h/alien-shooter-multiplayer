@@ -6,6 +6,13 @@
 #include "EntPlayer.h"
 #include "game/addresses.h"
 
+int EntPlayer__action(Entity* ECX, enEntAction action, void* arg1, void* arg2,
+                      void* arg3)
+{
+    return ((Entity__action_t)FUNC_ENT_PLAYER_ACTION)(ECX, 0, action, arg1,
+                                                      arg2, arg3);
+}
+
 int EntPlayer__set_armed_weapon(EntPlayer* ECX, int weapon_slot_id)
 {
     return ((EntPlayer__set_armed_weapon_t)FUNC_ENT_PLAYER_SET_ARMED_WEAPON)(

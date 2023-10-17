@@ -61,6 +61,13 @@ Alien Shooter is a single-player isometric top-down shooter released in 2003. Th
 ### OS Linux
 For now all components of the project can be built under Linux. Step-by-step instructions will be added later.
 
+## Documentation
+To generate the project documentation, use the following command:
+```bash
+./mingw32-make documentation
+```
+Once generated, the documentation will be available in the [/docs](/docs) directory of the project.
+
 ## Injection in game process
 The client (asmp.dll) can be injected into the game process using any dll injector/asi loader. However, to avoid dependency on third-party software, and ensure that hooks to some game functions are installed at the right time, a [patcher](/asmp-exe-patcher) of the game's executable was written.  
 The patcher overwrites bytes of the original game executable (AlienShooter.exe) in three places:

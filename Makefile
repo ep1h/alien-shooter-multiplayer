@@ -18,6 +18,9 @@ all:
 	$(MAKE) -C asmp-exe-patcher $(filter-out $@,$(MAKECMDGOALS))
 	$(MAKE) -C test $(filter-out $@,$(MAKECMDGOALS))
 
+documentation:
+	doxygen Doxyfile
+
 help:
 	@echo "This is the global Makefile for all components of the project."
 	@echo "Usage: make [COMPONENT] [TARGET] [VARIABLES]"
@@ -37,3 +40,6 @@ help:
 	@echo "Variables:"
 	@echo "  Avaliable variables are component-specific. Call 'help' for"
 	@echo "  a specific component for more information."
+	@echo ""
+	@echo "To generate documentation, run Makefile with the given parameter:"
+	@echo "  documentation"

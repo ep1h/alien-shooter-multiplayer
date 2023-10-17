@@ -1,4 +1,27 @@
-.PHONY: asmp-dll asmp-server asmp-exe-patcher test build test clean help
+.PHONY: asmp-dll asmp-server asmp-exe-patcher test build test clean help all documentation
+
+help:
+	@echo "This is the global Makefile for all components of the project."
+	@echo "Usage: make [COMPONENT] [TARGET] [VARIABLES]"
+	@echo ""
+	@echo "Components:"
+	@echo "  asmp-dll         - client (asmp.dll)"
+	@echo "  asmp-server      - server (asmp-server.exe)"
+	@echo "  asmp-exe-patcher - game executable patcher (asmp-exe-patcher.exe)"
+	@echo "  test             - tests"
+	@echo "  all              - all components"
+	@echo ""
+	@echo "Targets:"
+	@echo "  build - build a component of the project"
+	@echo "  clean - remove data created during component building"
+	@echo "  help  - show this message (default)"
+	@echo ""
+	@echo "Variables:"
+	@echo "  Avaliable variables are component-specific. Call 'help' for"
+	@echo "  a specific component for more information."
+	@echo ""
+	@echo "To generate documentation, run Makefile with the given parameter:"
+	@echo "  documentation"
 
 asmp-dll:
 	$(MAKE) -C asmp-dll $(filter-out $@,$(MAKECMDGOALS))
@@ -20,26 +43,3 @@ all:
 
 documentation:
 	doxygen Doxyfile
-
-help:
-	@echo "This is the global Makefile for all components of the project."
-	@echo "Usage: make [COMPONENT] [TARGET] [VARIABLES]"
-	@echo ""
-	@echo "Components:"
-	@echo "  asmp-dll         - client (asmp.dll)"
-	@echo "  asmp-server      - server (asmp-server.exe)"
-	@echo "  asmp-exe-patcher - game executable patcher (asmp-exe-patcher.exe)"
-	@echo "  test             - tests"
-	@echo "  all              - all components"
-	@echo ""
-	@echo "Targets:"
-	@echo "  build - build a component of the project"
-	@echo "  clean - remove data created during component building"
-	@echo "  help  - "
-	@echo ""
-	@echo "Variables:"
-	@echo "  Avaliable variables are component-specific. Call 'help' for"
-	@echo "  a specific component for more information."
-	@echo ""
-	@echo "To generate documentation, run Makefile with the given parameter:"
-	@echo "  documentation"

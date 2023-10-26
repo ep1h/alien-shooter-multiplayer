@@ -7,9 +7,9 @@ typedef struct File File;
 typedef struct File_vtbl File_vtbl;
 typedef struct FILE FILE;
 
-typedef File*(__thiscall* File__destroy_t)(File* this, char free);
-typedef size_t*(__thiscall* File__read_t)(File* this, void* buf, size_t size);
-typedef size_t*(__thiscall* File__write_t)(File* this, void* buf, size_t size);
+typedef File*(CC_THISCALL* File__destroy_t)(File* this, char free);
+typedef size_t*(CC_THISCALL* File__read_t)(File* this, void* buf, size_t size);
+typedef size_t*(CC_THISCALL* File__write_t)(File* this, void* buf, size_t size);
 
 typedef struct __cppobj File
 {

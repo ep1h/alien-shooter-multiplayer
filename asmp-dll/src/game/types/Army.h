@@ -14,11 +14,11 @@ typedef struct Army Army;
 typedef struct Army_vtbl Army_vtbl;
 typedef struct EntPlayer EntPlayer;
 
-typedef Army*(__thiscall* Army__destroy_t)(Army* this, int free);
-typedef uint32_t(__thiscall* Army__get_money_t)(Army* this);
-typedef uint32_t(__thiscall* Army__set_money_t)(Army* this, uint32_t money);
-typedef uint32_t(__thiscall* Army__set_clever_attack_t)(Army* this, int value);
-typedef EntPlayer*(__thiscall* Army__get_player_t)(Army* this);
+typedef Army*(CC_THISCALL* Army__destroy_t)(Army* this, int free);
+typedef uint32_t(CC_THISCALL* Army__get_money_t)(Army* this);
+typedef uint32_t(CC_THISCALL* Army__set_money_t)(Army* this, uint32_t money);
+typedef uint32_t(CC_THISCALL* Army__set_clever_attack_t)(Army* this, int value);
+typedef EntPlayer*(CC_THISCALL* Army__get_player_t)(Army* this);
 
 typedef struct __cppobj Army
 {
@@ -44,15 +44,15 @@ typedef struct __cppobj Army
 
 typedef struct __cppobj Army_vtbl
 {
-    Army*(__thiscall* destroy)(Army* __hidden this, int free);
+    Army*(CC_THISCALL* destroy)(Army* __hidden this, int free);
     void* f1;
     void* f2;
-    void(__thiscall* f3)(Army* __hidden this, int);
+    void(CC_THISCALL* f3)(Army* __hidden this, int);
     void* f4;
     void* f5;
     void* f6;
-    void(__thiscall* f7)(Army* __hidden this);
-    void(__thiscall* f8)(Army* __hidden this);
+    void(CC_THISCALL* f7)(Army* __hidden this);
+    void(CC_THISCALL* f8)(Army* __hidden this);
 } Army_vtbl;
 
 
@@ -61,7 +61,7 @@ typedef struct __cppobj Army_vtbl
  *
  * @param[in] ECX   Army instance pointer.
  * @param[in] free  Whether to free the memory allocated for the army.
- * 
+ *
  * @return Army* Pointer to destroyed army instance.
  */
 Army* Army__destroy(Army* ECX, int free);
@@ -87,10 +87,10 @@ uint32_t Army__set_money(Army* ECX, uint32_t money);
 
 /**
  * @brief Sets army clever attack flag.
- * 
+ *
  * @param[in] ECX   Army instance pointer.
  * @param[in] value Clever attack flag value.
- * 
+ *
  * @return unk. // TODO: Reverse-engineer this function.
  */
 uint32_t Army__set_clever_attack(Army* ECX, int value);

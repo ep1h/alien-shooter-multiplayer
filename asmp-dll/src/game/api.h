@@ -7,6 +7,7 @@
 #ifndef GAME_API_H
 #define GAME_API_H
 
+#include "types/common.h"
 #include "types/entities/Entity.h"
 #include "types/entities/EntPrimitive.h"
 #include "types/entities/EntFrame.h"

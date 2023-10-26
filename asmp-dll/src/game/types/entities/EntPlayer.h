@@ -12,11 +12,11 @@
 
 typedef struct EntPlayer EntPlayer;
 
-typedef int(__thiscall* EntPlayer__set_armed_weapon_t)(EntPlayer* this,
-                                                       int weapon_slot_id);
+typedef int(CC_THISCALL* EntPlayer__set_armed_weapon_t)(EntPlayer* this,
+                                                        int weapon_slot_id);
 
-typedef int(__thiscall* EntPlayer__give_weapon_t)(EntPlayer* this,
-                                                  enVid weapon_vid_idx);
+typedef int(CC_THISCALL* EntPlayer__give_weapon_t)(EntPlayer* this,
+                                                   enVid weapon_vid_idx);
 
 typedef struct __cppobj EntPlayer
 {

@@ -12,7 +12,7 @@ typedef struct Game Game;
 typedef struct Render Render;
 typedef struct HashMap HashMap;
 
-typedef int(__attribute__((__stdcall__)) * load_menu_t)(const char** menu_file);
+typedef int(CC_STDCALL* load_menu_t)(const char** menu_file);
 
 /**
  * @brief Returns a pointer to the main game class.

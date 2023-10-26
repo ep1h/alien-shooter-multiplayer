@@ -14,27 +14,27 @@ typedef struct Entity_vtbl Entity_vtbl;
 typedef struct EntityItem EntityItem;
 typedef struct Vid Vid;
 
-typedef float(__thiscall* Entity__calc_screen_x_t)(Entity* this);
-typedef float(__thiscall* Entity__calc_screen_y_t)(Entity* this);
-typedef float(__thiscall* Entity__get_screen_z_t)(Entity* this);
-typedef float(__thiscall* Entity__get_screen_x_t)(Entity* this);
-typedef float(__thiscall* Entity__get_screen_y_t)(Entity* this);
-typedef Vid*(__thiscall* Entity__get_vid_t)(Entity* this);
-typedef EntityItem*(__thiscall* Entity__get_items_t)(Entity* this);
-typedef Entity*(__thiscall* Entity__get_child_t)(Entity* this);
-typedef void*(__thiscall* Entity__destroy_t)(Entity* this, int free);
-typedef Entity*(__thiscall* Entity__get_goal_t)(Entity* this);
-typedef void(__thiscall* Entity__move_t)(Entity* this, float x, float y,
-                                         float z);
-typedef int(__thiscall* Entity__action_t)(Entity* this, enEntAction action,
-                                          void* arg1, void* arg2, void* arg3);
-typedef char(__thiscall* Entity__rotate_t)(Entity* this,
-                                           unsigned char direction);
-typedef void(__thiscall* Entity__set_anim_t)(Entity* this, enAnim anim_id);
-typedef void(__thiscall* Entity__add_child_t)(Entity* this, Entity* child);
-typedef int(__thiscall* Entity__remove_child_by_vid_t)(Entity* this, Vid* vid);
-typedef int(__thiscall* Entity__play_sfx_t)(Entity* this, int sfx_idx);
-typedef void(__thiscall* Entity__set_health_t)(Entity* this, int health);
+typedef float(CC_THISCALL* Entity__calc_screen_x_t)(Entity* this);
+typedef float(CC_THISCALL* Entity__calc_screen_y_t)(Entity* this);
+typedef float(CC_THISCALL* Entity__get_screen_z_t)(Entity* this);
+typedef float(CC_THISCALL* Entity__get_screen_x_t)(Entity* this);
+typedef float(CC_THISCALL* Entity__get_screen_y_t)(Entity* this);
+typedef Vid*(CC_THISCALL* Entity__get_vid_t)(Entity* this);
+typedef EntityItem*(CC_THISCALL* Entity__get_items_t)(Entity* this);
+typedef Entity*(CC_THISCALL* Entity__get_child_t)(Entity* this);
+typedef void*(CC_THISCALL* Entity__destroy_t)(Entity* this, int free);
+typedef Entity*(CC_THISCALL* Entity__get_goal_t)(Entity* this);
+typedef void(CC_THISCALL* Entity__move_t)(Entity* this, float x, float y,
+                                          float z);
+typedef int(CC_THISCALL* Entity__action_t)(Entity* this, enEntAction action,
+                                           void* arg1, void* arg2, void* arg3);
+typedef char(CC_THISCALL* Entity__rotate_t)(Entity* this,
+                                            unsigned char direction);
+typedef void(CC_THISCALL* Entity__set_anim_t)(Entity* this, enAnim anim_id);
+typedef void(CC_THISCALL* Entity__add_child_t)(Entity* this, Entity* child);
+typedef int(CC_THISCALL* Entity__remove_child_by_vid_t)(Entity* this, Vid* vid);
+typedef int(CC_THISCALL* Entity__play_sfx_t)(Entity* this, int sfx_idx);
+typedef void(CC_THISCALL* Entity__set_health_t)(Entity* this, int health);
 
 
 /**
@@ -78,11 +78,11 @@ typedef struct __cppobj Entity_vtbl
     Entity__destroy_t destroy;
     Entity__action_t action;
     void* unk_2;
-    void*(__thiscall* f3)(Entity* __hidden this);
-    void(__thiscall* f4)(Entity* __hidden this, Entity*);
+    void*(CC_THISCALL* f3)(Entity* __hidden this);
+    void(CC_THISCALL* f4)(Entity* __hidden this, Entity*);
     void* unk_5;
-    int(__thiscall* f6)(Entity* __hidden this);
-    void(__thiscall* f7)(Entity* __hidden this);
+    int(CC_THISCALL* f6)(Entity* __hidden this);
+    void(CC_THISCALL* f7)(Entity* __hidden this);
 } Entity_vtbl;
 
 

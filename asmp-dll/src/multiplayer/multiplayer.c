@@ -113,8 +113,8 @@ static Multiplayer* mp_ = 0;
  *
  * @return int Result of call to original Game::wnd_proc.
  */
-static int __fastcall Game__wnd_proc_hook_(Game* this, HWND hwnd, uint32_t msg,
-                                           uint32_t wparam, uint32_t lparam);
+static int CC_FASTCALL Game__wnd_proc_hook_(Game* this, HWND hwnd, uint32_t msg,
+                                            uint32_t wparam, uint32_t lparam);
 
 /**
  * @brief Hook of Game::load_menu function.
@@ -123,7 +123,7 @@ static int __fastcall Game__wnd_proc_hook_(Game* this, HWND hwnd, uint32_t msg,
  *
  * @return int Result of call to original Game::load_menu.
  */
-static int __stdcall Game__load_menu_hook_(const char** menu_file);
+static int CC_STDCALL Game__load_menu_hook_(const char** menu_file);
 
 /**
  * @brief Hook of Game::tick function.
@@ -134,7 +134,7 @@ static int __stdcall Game__load_menu_hook_(const char** menu_file);
  *
  * @return int Result of call original Game::tick.
  */
-static int __thiscall Game__tick_hook_(Game* this);
+static int CC_THISCALL Game__tick_hook_(Game* this);
 
 /**
  * @brief Hook of EntPlayer::set_armed_weapon function.
@@ -149,8 +149,8 @@ static int __thiscall Game__tick_hook_(Game* this);
  *             0 - weapon was not changed.
  *             1 - weapon was changed.
  */
-static int __thiscall EntPlayer__set_armed_weapon_hook_(EntPlayer* this,
-                                                        int weapon_slot_id);
+static int CC_THISCALL EntPlayer__set_armed_weapon_hook_(EntPlayer* this,
+                                                         int weapon_slot_id);
 
 /**
  * @brief Hook of EntPlayer::action function.
@@ -165,8 +165,8 @@ static int __thiscall EntPlayer__set_armed_weapon_hook_(EntPlayer* this,
  *
  * @return int Result of call to original EntPlayer::action.
  */
-static int __thiscall EntPlayer__action_hook_(Entity* this, enEntAction action,
-                                              void* a3, void* a4, void* a5);
+static int CC_THISCALL EntPlayer__action_hook_(Entity* this, enEntAction action,
+                                               void* a3, void* a4, void* a5);
 
 /**
  * @brief Hook of EntPlayer::set_anim function.
@@ -176,7 +176,7 @@ static int __thiscall EntPlayer__action_hook_(Entity* this, enEntAction action,
  *                  EDX - unused variable (actually this is EDX register value).
  * @param anim_id New animation id.
  */
-static void __thiscall Entity__set_anim_hook_(Entity* this, enAnim anim_id);
+static void CC_THISCALL Entity__set_anim_hook_(Entity* this, enAnim anim_id);
 
 /**
  * @brief Hook of IDirect3DDevice8::EndScene function.
@@ -185,7 +185,7 @@ static void __thiscall Entity__set_anim_hook_(Entity* this, enAnim anim_id);
  *
  * @return long Result of call to original IDirect3DDevice8::EndScene.
  */
-static long __stdcall IDirect3DDevice8__end_scene_hook_(IDirect3DDevice8* dev);
+static long CC_STDCALL IDirect3DDevice8__end_scene_hook_(IDirect3DDevice8* dev);
 
 /**
  * @brief Calls each time when remote player's user info is received.
@@ -260,8 +260,8 @@ static void handle_remote_players_(void);
 static void draw_health_bars_(void);
 
 
-static int __fastcall Game__wnd_proc_hook_(Game* this, HWND hwnd, uint32_t msg,
-                                           uint32_t wparam, uint32_t lparam)
+static int CC_FASTCALL Game__wnd_proc_hook_(Game* this, HWND hwnd, uint32_t msg,
+                                            uint32_t wparam, uint32_t lparam)
 {
     if (msg == 0x001C) /* WM_ACTIVATEAPP */
     {
@@ -272,7 +272,7 @@ static int __fastcall Game__wnd_proc_hook_(Game* this, HWND hwnd, uint32_t msg,
                                                  lparam);
 }
 
-static int __stdcall Game__load_menu_hook_(const char** menu_file)
+static int CC_STDCALL Game__load_menu_hook_(const char** menu_file)
 {
     // console_log("Game::load_menu: %s\n", *menu_file);
     /* If main menu, load the custom one instead */
@@ -290,15 +290,15 @@ static int __stdcall Game__load_menu_hook_(const char** menu_file)
     return mp_->Game__load_menu_trampoline(menu_file);
 }
 
-static int __thiscall Game__tick_hook_(Game* this)
+static int CC_THISCALL Game__tick_hook_(Game* this)
 {
     int result = ((Game__tick_t)FUNC_GAME_TICK)(ECX, EDX);
     multiplayer_tick();
     return result;
 }
 
-static int __thiscall EntPlayer__set_armed_weapon_hook_(EntPlayer* this,
-                                                        int weapon_slot_id)
+static int CC_THISCALL EntPlayer__set_armed_weapon_hook_(EntPlayer* this,
+                                                         int weapon_slot_id)
 {
     int result =
         mp_->EntPlayer__set_armed_weapon_trampoline(ECX, EDX, weapon_slot_id);
@@ -339,8 +339,8 @@ static int __thiscall EntPlayer__set_armed_weapon_hook_(EntPlayer* this,
     return result;
 }
 
-static int __thiscall EntPlayer__action_hook_(Entity* this, enEntAction action,
-                                              void* a3, void* a4, void* a5)
+static int CC_THISCALL EntPlayer__action_hook_(Entity* this, enEntAction action,
+                                               void* a3, void* a4, void* a5)
 {
     static float attack_x = 0.0f;
     static float attack_y = 0.0f;
@@ -363,7 +363,7 @@ static int __thiscall EntPlayer__action_hook_(Entity* this, enEntAction action,
                                                       a5);
 }
 
-static void __thiscall Entity__set_anim_hook_(Entity* this, enAnim anim_id)
+static void CC_THISCALL Entity__set_anim_hook_(Entity* this, enAnim anim_id)
 {
     if ((mp_->state_connected_substate == SCS_PLAY))
     {
@@ -396,9 +396,9 @@ static void __thiscall Entity__set_anim_hook_(Entity* this, enAnim anim_id)
     return mp_->Entity__set_anim_trampoline(ECX, EDX, anim_id);
 }
 
-static long __stdcall IDirect3DDevice8__end_scene_hook_(IDirect3DDevice8* dev)
+static long CC_STDCALL IDirect3DDevice8__end_scene_hook_(IDirect3DDevice8* dev)
 {
-    typedef long(__stdcall * IDirect3DDevice8__end_scene_t)(IDirect3DDevice8*);
+    typedef long(CC_STDCALL * IDirect3DDevice8__end_scene_t)(IDirect3DDevice8*);
 
     Render__draw_colored_rect(game_globals_get_render(), 40, 40, 45, 45,
                               0x77F04A9B);

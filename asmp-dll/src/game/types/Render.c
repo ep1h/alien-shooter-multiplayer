@@ -7,12 +7,12 @@
 #include "game/addresses.h"
 #include "game/types/common.h"
 
-typedef int(__thiscall* Render__set_environment_t)(Render* this,
-                                                   enEnvironment env);
-typedef float(__thiscall* Render__draw_colored_rect_t)(Render* this, float x1,
-                                                       float y1, float x2,
-                                                       float y2,
-                                                       uint32_t color_ARGB);
+typedef int(CC_THISCALL* Render__set_environment_t)(Render* this,
+                                                    enEnvironment env);
+typedef float(CC_THISCALL* Render__draw_colored_rect_t)(Render* this, float x1,
+                                                        float y1, float x2,
+                                                        float y2,
+                                                        uint32_t color_ARGB);
 
 float Render__draw_colored_rect(Render* ECX, float x1, float y1, float x2,
                                 float y2, uint32_t color_ARGB)

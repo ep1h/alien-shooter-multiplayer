@@ -13,26 +13,25 @@ typedef struct Vid Vid;
 typedef struct Vid_vtbl Vid_vtbl;
 typedef struct Entity Entity;
 
-typedef Vid*(__thiscall* Vid__set_hidden_t)(Vid* this, int value);
-typedef uint32_t(__thiscall* Vid__set_hp_coeff_army_t)(Vid* this, char army,
-                                                       int coeff);
-typedef Vid*(__thiscall* Vid__set_max_hp_army_t)(Vid* this, char army,
-                                                int maxhp);
-typedef uint32_t(__thiscall* Vid__is_hidden_t)(Vid* this);
-typedef int(__thiscall* Vid__get_ammo_t)(Vid* this);
-typedef uint32_t(__thiscall* Vid__get_max_hp_army_t)(Vid* this, char army_idx);
-typedef uint32_t(__thiscall* Vid__get_entities_number_army_t)(
-    Vid* this, int army_idx);
-typedef uint32_t(__thiscall* Vid__get_entities_number_total_t)(
-    Vid* this);
-typedef uint32_t(__thiscall* Vid__get_death_army_t)(Vid* this, int army_idx);
-typedef uint32_t(__thiscall* Vid__get_death_total_t)(Vid* this);
-typedef uint32_t(__thiscall* Vid__get_recolors_number_army_t)(Vid* this,
-                                                              char army_idx);
-typedef uint32_t(__thiscall* Vid__get_recolors_number_total_t)(Vid* this);
-typedef uint32_t(__thiscall* Vid__get_can_not_be_child_t)(Vid* this);
-typedef uint32_t(__thiscall* Vid__set_can_not_be_child_t)(Vid* this,
-                                                          uint32_t a2);
+typedef Vid*(CC_THISCALL* Vid__set_hidden_t)(Vid* this, int value);
+typedef uint32_t(CC_THISCALL* Vid__set_hp_coeff_army_t)(Vid* this, char army,
+                                                        int coeff);
+typedef Vid*(CC_THISCALL* Vid__set_max_hp_army_t)(Vid* this, char army,
+                                                  int maxhp);
+typedef uint32_t(CC_THISCALL* Vid__is_hidden_t)(Vid* this);
+typedef int(CC_THISCALL* Vid__get_ammo_t)(Vid* this);
+typedef uint32_t(CC_THISCALL* Vid__get_max_hp_army_t)(Vid* this, char army_idx);
+typedef uint32_t(CC_THISCALL* Vid__get_entities_number_army_t)(Vid* this,
+                                                               int army_idx);
+typedef uint32_t(CC_THISCALL* Vid__get_entities_number_total_t)(Vid* this);
+typedef uint32_t(CC_THISCALL* Vid__get_death_army_t)(Vid* this, int army_idx);
+typedef uint32_t(CC_THISCALL* Vid__get_death_total_t)(Vid* this);
+typedef uint32_t(CC_THISCALL* Vid__get_recolors_number_army_t)(Vid* this,
+                                                               char army_idx);
+typedef uint32_t(CC_THISCALL* Vid__get_recolors_number_total_t)(Vid* this);
+typedef uint32_t(CC_THISCALL* Vid__get_can_not_be_child_t)(Vid* this);
+typedef uint32_t(CC_THISCALL* Vid__set_can_not_be_child_t)(Vid* this,
+                                                           uint32_t a2);
 
 typedef struct __cppobj Vid
 {
@@ -125,10 +124,10 @@ typedef struct __cppobj Vid
 
 typedef struct Vid_vtbl
 {
-    Vid*(__thiscall* unk_0)(Vid* __hidden this);
-    void(__thiscall* destructor)(Vid* __hidden this, int);
+    Vid*(CC_THISCALL* unk_0)(Vid* __hidden this);
+    void(CC_THISCALL* destructor)(Vid* __hidden this, int);
     void* unk_2;
-    int(__thiscall* f3)(Vid* __hidden this, Entity*);
+    int(CC_THISCALL* f3)(Vid* __hidden this, Entity*);
     void* unk_4;
     void* unk_5;
     void* unk_6;

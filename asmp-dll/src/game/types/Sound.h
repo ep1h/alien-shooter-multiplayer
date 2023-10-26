@@ -5,8 +5,8 @@
 
 typedef struct Sound Sound;
 
-typedef float(__thiscall* Sound__set_sound_volume_t)(Sound* this, int volume);
-typedef float(__thiscall* Sound__set_music_volume_t)(Sound* this, int volume);
+typedef float(CC_THISCALL* Sound__set_sound_volume_t)(Sound* this, int volume);
+typedef float(CC_THISCALL* Sound__set_music_volume_t)(Sound* this, int volume);
 
 typedef struct Sound
 {

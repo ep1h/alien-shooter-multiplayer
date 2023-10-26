@@ -30,37 +30,37 @@ typedef struct Entity Entity;
 typedef struct Settings Settings;
 typedef struct EntPlayer EntPlayer;
 
-typedef Game*(__thiscall* Game__constructor_t)(Game* this,
-                                               HINSTANCE instance_handle,
-                                               HINSTANCE prev_instance_handle,
-                                               const char** argv, int show_cmd,
-                                               Settings* settings);
-typedef Game*(__thiscall* Game__destroy_t)(Game* this, char free);
-typedef int(__thiscall* Game__tick_t)(Game* this);
-typedef Vid*(__thiscall* Game__get_vid_by_idx_t)(Game* this, enVid vid_idx);
-typedef Entity*(__thiscall* Game__create_entity_t)(Game* this, Vid* vid,
-                                                   float x, float y, float z,
-                                                   int a6, void* parent);
-typedef Game*(__thiscall* Game__init_t)(Game* this, HINSTANCE instance_handle,
-                                        HINSTANCE prev_instance_handle,
-                                        const char** argv, int show_cmd,
-                                        Settings* settings);
-typedef int(__thiscall* Game__wnd_proc_t)(Game* this, HWND hwnd, uint32_t msg,
-                                         uint32_t wparam, uint32_t lparam);
-typedef void(__thiscall* Game__load_map_t)(Game* this,
-                                           const char* map_file_path);
-typedef EntPlayer*(__thiscall* Game__get_army_player_t)(Game* this,
-                                                        char army_idx);
-// typedef uint32_t(__thiscall* Game__get_flagman_army_0x24_t)(Game* this);
-typedef Entity*(__thiscall* Game__get_entity_at_screen_pos_t)(
+typedef Game*(CC_THISCALL* Game__constructor_t)(Game* this,
+                                                HINSTANCE instance_handle,
+                                                HINSTANCE prev_instance_handle,
+                                                const char** argv, int show_cmd,
+                                                Settings* settings);
+typedef Game*(CC_THISCALL* Game__destroy_t)(Game* this, char free);
+typedef int(CC_THISCALL* Game__tick_t)(Game* this);
+typedef Vid*(CC_THISCALL* Game__get_vid_by_idx_t)(Game* this, enVid vid_idx);
+typedef Entity*(CC_THISCALL* Game__create_entity_t)(Game* this, Vid* vid,
+                                                    float x, float y, float z,
+                                                    int a6, void* parent);
+typedef Game*(CC_THISCALL* Game__init_t)(Game* this, HINSTANCE instance_handle,
+                                         HINSTANCE prev_instance_handle,
+                                         const char** argv, int show_cmd,
+                                         Settings* settings);
+typedef int(CC_THISCALL* Game__wnd_proc_t)(Game* this, HWND hwnd, uint32_t msg,
+                                           uint32_t wparam, uint32_t lparam);
+typedef void(CC_THISCALL* Game__load_map_t)(Game* this,
+                                            const char* map_file_path);
+typedef EntPlayer*(CC_THISCALL* Game__get_army_player_t)(Game* this,
+                                                         char army_idx);
+// typedef uint32_t(CC_THISCALL* Game__get_flagman_army_0x24_t)(Game* this);
+typedef Entity*(CC_THISCALL* Game__get_entity_at_screen_pos_t)(
     Game* this, enGetSpriteType a_type, float scr_x, float scr_y);
-typedef int(__thiscall* Game__is_vid_idx_exists_t)(Game* this, int vid_idx);
-typedef Entity*(__thiscall* Game__get_entity_at_pos_t)(Game* this,
-                                                       enGetSpriteType a_type,
-                                                       float x, float y,
-                                                       float z, int prev);
-typedef double(__thiscall* Game__get_ground_z_t)(Game* this, float x, float y);
-typedef Army*(__thiscall* Game__get_army_by_idx_t)(Game* this, char army_idx);
+typedef int(CC_THISCALL* Game__is_vid_idx_exists_t)(Game* this, int vid_idx);
+typedef Entity*(CC_THISCALL* Game__get_entity_at_pos_t)(Game* this,
+                                                        enGetSpriteType a_type,
+                                                        float x, float y,
+                                                        float z, int prev);
+typedef double(CC_THISCALL* Game__get_ground_z_t)(Game* this, float x, float y);
+typedef Army*(CC_THISCALL* Game__get_army_by_idx_t)(Game* this, char army_idx);
 
 /**
  * @brief Main game class.

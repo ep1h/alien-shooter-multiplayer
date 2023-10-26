@@ -7,10 +7,10 @@
 typedef struct Input Input;
 typedef struct File File;
 
-typedef int(__thiscall* Inpit__Input_t)(Input* this);
-typedef size_t(__thiscall* Input__write_to_file)(Input* this, File* file);
-typedef size_t(__thiscall* Input__read_from_file)(Input* this, File* file);
-typedef int(__thiscall* Inpit__clear_t)(Input* this);
+typedef int(CC_THISCALL* Inpit__Input_t)(Input* this);
+typedef size_t(CC_THISCALL* Input__write_to_file)(Input* this, File* file);
+typedef size_t(CC_THISCALL* Input__read_from_file)(Input* this, File* file);
+typedef int(CC_THISCALL* Inpit__clear_t)(Input* this);
 
 typedef struct Input
 {

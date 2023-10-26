@@ -1,6 +1,7 @@
 /**
  * @file common.h
- * @brief Helper macros for translating C++ call conventions to C.
+ * @brief Macros to facilitate interoperability between C and C++ in varying
+ * compiler environments.
  */
 #ifndef TYPES_COMMON_H
 #define TYPES_COMMON_H
@@ -14,16 +15,20 @@
 #define THIS_ ECX, void* EDX
 #define this  THIS_
 
-#ifndef __stdcall
-#define __stdcall __attribute__((__stdcall__))
-#endif /* __stdcall */
+#if defined(_MSC_VER)
+#define CC_CDECL    __cdecl
+#define CC_STDCALL  __stdcall
+#define CC_FASTCALL __fastcall
+#define CC_THISCALL __fastcall
 
-#ifndef __fastcall
-#define __fastcall __attribute__((__fastcall__))
-#endif /* __fastcall */
+#elif defined(__GNUC__) || defined(__clang__)
+#define CC_CDECL    __attribute__((cdecl))
+#define CC_STDCALL  __attribute__((stdcall))
+#define CC_FASTCALL __attribute__((fastcall))
+#define CC_THISCALL __attribute__((fastcall))
 
-#define __THISCALL __attribute__((__fastcall__))
-#undef __thiscall
-#define __thiscall __THISCALL
+#else
+#error "Unknown compiler"
+#endif /* _MSC_VER */
 
 #endif /* TYPES_COMMON_H */

@@ -3,6 +3,7 @@ Alien Shooter is a single-player isometric top-down shooter released in 2003. Th
 
 ## Navigation
 - [Repository navigation](#Repository-navigation)
+- [Prerequisites](#Prerequisites)
 - [Build](#Build)
 - [Injection in game process](#Injection-in-game-process)
 - [Server-client architecture](#Server-client-architecture)
@@ -27,39 +28,58 @@ Alien Shooter is a single-player isometric top-down shooter released in 2003. Th
 - [/test](/test) - Unit tests for critical logic.
 - [/AlienShooter.exe.idb](/AlienShooter.exe.idb) - IDA database with all information found by reverse engineering the game's executable file (AlienShooter.exe).
 
-## Build
+## Prerequisites
 ### OS Windows
-1. Ensure **GCC**, **Makefile**, **git-bash** are installed.
-
-2. Clone the repository:
-    ```bash
-   git clone https://github.com/ep1h/alien-shooter-multiplayer
-   ```
-
-3. Navigate to the root directory of the project using git-bash.
-
-4. Build asmp.dll
-   ```bash
-   ./mingw32-make asmp-dll build
-   ```
-   On successful build, asmp.dll will be located at `asmp-dll/build/asmp.dll` path.
-
-5. Build asmp-server.exe
-   ```
-   ./mingw32-make asmp-server build
-   ```
-   On successful build, asmp-server will be located at `asmp-server/build/asmp-server.exe` path.
-
-6. Build asmp-exe-patcher.exe
-   ```
-   ./mingw32-make asmp-exe-patcher build
-   ```
-   On successful build, asmp-server will be located at `asmp-exe-patcher/build/asmp-exe-p4tch.exe` path.
-
-   Note: The patcher name uses a '4' instead of 'a', because Windows automatically adds admin rights requirements to run .exe files with "patch" pattern in the name.
+* Ensure **GCC**, **Make** are installed.
+* Depending on your installation, the `make` command might be called `mingw32-make`. If `make` doesn't work, try using `./mingw32-make` instead.
 
 ### OS Linux
-For now all components of the project can be built under Linux. Step-by-step instructions will be added later.
+Install Make:
+```bash
+apt-get install make
+```
+Install Mingw:
+
+For 32-bit system:
+```bash
+apt-get install mingw32
+```
+For 64-bit system:
+```bash
+apt-get install mingw-w64
+```
+
+## Build
+1. Clone the repository:
+```bash
+git clone https://github.com/ep1h/alien-shooter-multiplayer
+```
+
+2. Navigate to the root directory of the project.
+```bash
+cd alien-shooter-multiplayer
+```
+
+3. Build asmp.dll
+```bash
+./mingw32-make asmp-dll build
+```
+On successful build, asmp.dll will be located at `asmp-dll/build/asmp.dll` path.
+
+4. Build asmp-server.exe
+```bash
+./mingw32-make asmp-server build
+```
+On successful build, asmp-server will be located at `asmp-server/build/asmp-server.exe` path.
+
+5. Build asmp-exe-patcher.exe
+```bash
+./mingw32-make asmp-exe-patcher build
+```
+On successful build, asmp-exe-patcher will be located at `asmp-exe-patcher/build/asmp-exe-p4tch.exe` path.
+
+Note: The patcher name uses a '4' instead of 'a', because Windows automatically adds admin rights requirements to run .exe files with "patch" pattern in the name.
+
 
 ## Documentation
 To generate the project documentation, use the following command:
